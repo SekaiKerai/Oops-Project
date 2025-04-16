@@ -1,3 +1,5 @@
+// NOT FINAL
+// Must Make changes to the enter to continue part. Press enter only once not twice
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -87,18 +89,18 @@ T getValidInput(const string& prompt, T minVal, T maxVal) {
     }
 }
 
-string getValidString(const string& prompt, bool (*validator)(const string&) = nullptr) {
+string getValidString(const string& prompt, bool (*validator)(const string&) = nullptr, bool allowBlank = false) {
     string input;
     while (true) {
         cout << prompt;
         getline(cin, input);
         
-        if (input.empty()) {
+        if (input.empty() && !allowBlank) {
             cout << "Input cannot be empty. Please try again.\n";
             continue;
         }
         
-        if (validator && !validator(input)) {
+        if (validator && !input.empty() && !validator(input)) {
             continue;
         }
         
@@ -491,6 +493,10 @@ void bookCab(const vector<Location>& locations, const vector<Driver>& drivers) {
     } catch (const exception& e) {
         cerr << "Error: " << e.what() << endl;
     }
+    
+    cout << "\nPress Enter to continue...";
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    cin.get();
 }
 
 void rentCab(const vector<RentalVehicle>& vehicles) {
@@ -589,6 +595,10 @@ void rentCab(const vector<RentalVehicle>& vehicles) {
     } catch (const exception& e) {
         cerr << "Error: " << e.what() << endl;
     }
+    
+    cout << "\nPress Enter to continue...";
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    cin.get();
 }
 
 void viewUserProfile(User& user) {
@@ -606,16 +616,16 @@ void viewUserProfile(User& user) {
         if (getConfirmation("\nDo you want to edit your profile?")) {
             cout << "\nLeave field blank to keep current value:\n";
             
-            string newName = getValidString("Enter new name [" + user.name + "]: ");
+            string newName = getValidString("Enter new name [" + user.name + "]: ", nullptr, true);
             if (!newName.empty()) user.name = newName;
             
-            string newPhone = getValidString("Enter new phone [" + user.phone + "]: ", validatePhone);
+            string newPhone = getValidString("Enter new phone [" + user.phone + "]: ", validatePhone, true);
             if (!newPhone.empty()) user.phone = newPhone;
             
-            string newAadhaar = getValidString("Enter new Aadhaar [" + user.aadhaar + "]: ", validateAadhaar);
+            string newAadhaar = getValidString("Enter new Aadhaar [" + user.aadhaar + "]: ", validateAadhaar, true);
             if (!newAadhaar.empty()) user.aadhaar = newAadhaar;
             
-            string newEmail = getValidString("Enter new email [" + user.email + "]: ", validateEmail);
+            string newEmail = getValidString("Enter new email [" + user.email + "]: ", validateEmail, true);
             if (!newEmail.empty()) user.email = newEmail;
             
             saveUserProfile(user);
@@ -624,6 +634,10 @@ void viewUserProfile(User& user) {
     } catch (const exception& e) {
         cerr << "Error: " << e.what() << endl;
     }
+    
+    cout << "\nPress Enter to continue...";
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    cin.get();
 }
 
 void viewBookingHistory() {
@@ -669,6 +683,10 @@ void viewBookingHistory() {
     } catch (const exception& e) {
         cerr << "Error: " << e.what() << endl;
     }
+    
+    cout << "\nPress Enter to continue...";
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    cin.get();
 }
 
 void viewRentalHistory() {
@@ -713,6 +731,10 @@ void viewRentalHistory() {
     } catch (const exception& e) {
         cerr << "Error: " << e.what() << endl;
     }
+    
+    cout << "\nPress Enter to continue...";
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    cin.get();
 }
 
 void viewHistoryMenu() {
@@ -738,10 +760,6 @@ void viewHistoryMenu() {
             case 3:
                 return;
         }
-        
-        cout << "\nPress Enter to continue...";
-        cin.ignore();
-        cin.get();
     }
 }
 
@@ -818,10 +836,6 @@ int main() {
                     cout << "+-------------------------------------+\n";
                     return 0;
             }
-            
-            cout << "\nPress Enter to continue...";
-            cin.ignore();
-            cin.get();
         }
     } catch (const exception& e) {
         cerr << "\nFatal error: " << e.what() << endl;
