@@ -264,6 +264,40 @@ bool validateEmail(const string& email) {
     return true;
 }
 
+string getValidUsername(const string& prompt) {
+    string username;
+    bool isValid;
+    cout << prompt; 
+
+    do {
+        
+        getline(cin, username);
+
+        username.erase(0, username.find_first_not_of(" \t\n\r\f\v"));
+        username.erase(username.find_last_not_of(" \t\n\r\f\v") + 1);
+
+        isValid = true;
+
+        for (char &c : username) {
+            c = tolower(c); 
+            if (!isalnum(c) && c != '.' && c != '_') {
+                cout << "❌ Invalid character '" << c << "'. Only letters (a-z), numbers (0-9), '.', and '_' are allowed.\n";
+                isValid = false;
+                break;
+            }
+        }
+
+        if (isValid && username.empty()) {
+            cout << "Username cannot be empty.\n";
+            isValid = false;
+        }
+
+    } while (!isValid);
+
+    return username;
+}
+
+
 bool getConfirmation(const string& prompt) {
     char response;
     while (true) {
@@ -381,12 +415,32 @@ User loginUser(const vector<LoginCredentials>& allCredentials) {
         cout << "\n+-------------------------------------+\n";
         cout << "|               LOGIN                |\n";
         cout << "+-------------------------------------+\n";
-        string username = getValidString("Username: ");
+
+        
+        string username;
+        bool usernameExists = false;
+        while (true) {
+            username = getValidUsername("Username: ");
+            
+            
+            for (const auto& cred : allCredentials) {
+                if (cred.username == username) {
+                    usernameExists = true;
+                    break;
+                }
+            }
+            
+            if (usernameExists) break;
+            cout << "Username not found. Please try again.\n";
+        }
+
+        
         string password = getAndValidatePassword();
+
         
         for (const auto& cred : allCredentials) {
             if (cred.username == username && cred.password == password) {
-                // Load full user details
+                // Load full user details from Users.csv
                 ifstream file("Users.csv");
                 string line;
                 while (getline(file, line)) {
@@ -405,11 +459,12 @@ User loginUser(const vector<LoginCredentials>& allCredentials) {
                 }
             }
         }
-        cout << "Invalid username or password. Try again.\n";
+        
+        cout << "Invalid password. Try again.\n";
     }
 }
 
-User registerNewUser(const string& role) {
+User registerNewUser(const string& role, const vector<LoginCredentials>& allCredentials) {
     User newUser;
     newUser.role = role;
     
@@ -417,7 +472,22 @@ User registerNewUser(const string& role) {
     cout << "|          NEW " << setw(10) << left << (role == "user" ? "USER" : "DRIVER") << " REGISTRATION       |\n";
     cout << "+-------------------------------------+\n";
     
-    newUser.username = getValidString("Choose a username: ");
+    
+    bool usernameExists;
+    do {
+        usernameExists = false;
+        newUser.username = getValidUsername("Choose Username: ");
+        
+        // Check if username already exists
+        for (const auto& cred : allCredentials) {
+            if (cred.username == newUser.username) {
+                cout << "Username already exists. Please choose a different one.\n";
+                usernameExists = true;
+                break;
+            }
+        }
+    } while (usernameExists);
+    
     newUser.password = getAndValidatePassword();
     
     if (role == "user") {
@@ -428,7 +498,6 @@ User registerNewUser(const string& role) {
     } else { // driver
         newUser.name = getValidString("Enter your full name: ");
         newUser.phone = getValidString("Enter your phone number: ", validatePhone);
-        // Drivers might not need aadhaar/email
         newUser.aadhaar = "N/A";
         newUser.email = "N/A";
     }
@@ -488,7 +557,7 @@ User handleLogin(bool showWelcome = true) {
         if (authChoice == 1) {
             return loginUser(allCredentials);
         } else if (authChoice == 2) {
-            return registerNewUser(role);
+            return registerNewUser(role,allCredentials);
         }
     }
 }
@@ -1274,7 +1343,7 @@ int main() {
             
             cout << "========================================\n";
             
-            int maxChoice = currentUser.role == "user" ? 5 : 3;
+            int maxChoice = currentUser.role == "user" ? 6 : 4;
             int choice = getValidInput("Enter your choice (1-" + to_string(maxChoice) + "): ", 1, maxChoice);
             
             if (currentUser.role == "user") {
@@ -1315,48 +1384,3 @@ int main() {
     }
     return 0;
 }
-
-    //     while (true) {
-    //         cout << "\n";
-    //         cout << "========================================\n";
-    //         cout << "|       CAB BOOKING SYSTEM MENU       |\n";
-    //         cout << "========================================\n";
-    //         cout << "| 1. Book a Cab                      |\n";
-    //         cout << "| 2. Rent a Vehicle                  |\n";
-    //         cout << "| 3. View/Edit Profile              |\n";
-    //         cout << "| 4. View History                   |\n";
-    //         cout << "| 5. Exit                           |\n";
-    //         cout << "========================================\n";
-            
-    //         int choice = getValidInput("Enter your choice (1-5): ", 1, 5);
-            
-    //         switch (choice) {
-    //             case 1:
-    //                 bookCab(locations, drivers);
-    //                 break;
-    //             case 2:
-    //                 rentCab(rentalVehicles);
-    //                 break;
-    //             case 3:
-    //                 viewUserProfile(user);
-    //                 break;
-    //             case 4:
-    //                 viewHistoryMenu();
-    //                 break;
-    //             case 5:
-    //                 cout << "\n";
-    //                 cout << "+-------------------------------------+\n";
-    //                 cout << "|  THANK YOU FOR USING OUR SERVICE!  |\n";
-    //                 cout << "|        HAVE A GREAT DAY!           |\n";
-    //                 cout << "+-------------------------------------+\n";
-    //                 return 0;
-    //         }
-    //     }
-    // } catch (const exception& e) {
-    //     cerr << "\nFatal error: " << e.what() << endl;
-    //     cerr << "The program will now exit. Please try again later.\n";
-    //     return 1;
-    // }
-//     // return 0;
-// }
-
