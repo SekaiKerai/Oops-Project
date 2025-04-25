@@ -1,0 +1,48 @@
+user.csv
+username,password,name,phone,aadhaar,email,role
+
+kunl,password123,kunl,1010101010,101010101010,kunalkj@gmail.com,user
+driver1,driverpass,Rani Kumari,9741234567,123456789012,,driver
+
+BookingHistory.csv
+username,datetime,driver,vehicle,distance,price,startloc,endloc
+
+RentalHistory.csv
+username,datetime,rentaltype,vehicle,days,price,startloc,endloc
+
+saveHistory
+void saveHistory(const string& username, const string& type, const string& driverName, 
+    const string& vehicleType, double distanceOrDays, double price, 
+    const string& startLocation, const string& endLocation)
+
+
+for rental format:
+username , "RENTAL", type + model in this, "N/A", days, totalprice, "N/A", "N/A"
+saving of rental history commented to be fixed
+
+problem in history saving for every user -> currently saving in rental file need to save in bookking file
+accessing is ok (DONE)
+
+and display of history also messed up (DONE)
+
+login with new user not saving in the user.csv (DONE)
+review should come after the booking confirmed msg - booking cab (done)
+Add sharing option in booking cab and update price accordingly - do only showing of price change (done)	
+rental history display wrong - displaying all not user wise (done)
+profile summary : display the username also (done)
+updating profile is erasing everything and adding current updated profile (done)
+
+OPERATOR OVERLOADING IN viewUserProfile() check in ppt
+----------------------TO DO------------------------------
+password astericks thing
+Logout option in main menu
+UserName : No space only alphanumerical charecters and _
+No duplication of User
+
+Profile :
+prompt 1 for profile info
+2 for password change
+
+Driver login
+new driver registration display
+email and aadhar entry
