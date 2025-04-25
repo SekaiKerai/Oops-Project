@@ -1,5 +1,3 @@
-// NOT FINAL
-// Must Make changes to the enter to continue part. Press enter only once not twice
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -16,7 +14,13 @@
 #include <cfloat>
 #include <iomanip>  
 #include <limits>   
+#include <memory>
+#include <conio.h>
 using namespace std;
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 
 // Custom exception classes
 class RatingException : public exception {
@@ -47,14 +51,122 @@ struct Location {
     double lon;
 };
 
-struct RentalVehicle {
+// Rental Vehicle Hierarchy
+class RentalVehicle {
+protected:
     string type;
-    string model;
-    string color;
+    string modelAndColor;  // Combined field
     string licensePlate;
     string ownerName;
     string contact;
     double pricePerDay;
+public:
+    RentalVehicle(const string& t, const string& mc, const string& lp, 
+                const string& on, const string& cnt, double ppd)
+        : type(t), modelAndColor(mc), licensePlate(lp), ownerName(on), contact(cnt), pricePerDay(ppd) {}
+    
+    virtual ~RentalVehicle() = default;
+    
+    virtual void displayDetails() const {
+        cout << "| " << setw(31) << left << modelAndColor << " | "
+            << setw(9) << left << licensePlate << " | "
+            << setw(14) << left << ownerName << " | "
+            << setw(10) << left << contact << " | "
+            << "Rs." << setw(8) << left << fixed << setprecision(2) << pricePerDay << " |\n";
+    }
+    
+    string getType() const { return type; }
+    string getModelAndColor() const { return modelAndColor; }
+    string getLicensePlate() const { return licensePlate; }
+    string getOwnerName() const { return ownerName; }
+    string getContact() const { return contact; }
+    double getPricePerDay() const { return pricePerDay; }
+};
+
+class Motorcycle : public RentalVehicle {
+public:
+    Motorcycle(const string& mc, const string& lp, 
+              const string& on, const string& cnt, double ppd)
+        : RentalVehicle("Motorcycle", mc, lp, on, cnt, ppd) {}
+};
+
+class Hatchback : public RentalVehicle {
+public:
+    Hatchback(const string& mc, const string& lp, 
+             const string& on, const string& cnt, double ppd)
+        : RentalVehicle("Hatchback", mc, lp, on, cnt, ppd) {}
+};
+
+class Sedan : public RentalVehicle {
+public:
+    Sedan(const string& mc, const string& lp, 
+         const string& on, const string& cnt, double ppd)
+        : RentalVehicle("Sedan", mc, lp, on, cnt, ppd) {}
+};
+
+class SUV : public RentalVehicle {
+public:
+    SUV(const string& mc, const string& lp, 
+       const string& on, const string& cnt, double ppd)
+        : RentalVehicle("SUV", mc, lp, on, cnt, ppd) {}
+};
+
+// Booking Hierarchy
+class Booking {
+protected:
+    string username;
+    string driverName;
+    string vehicleType;
+    double distance;
+    double price;
+    string startLocation;
+    string endLocation;
+public:
+    Booking(const string&usn,const string& dn, const string& vt, double dist, const string& sl, const string& el)
+        : driverName(dn), vehicleType(vt), distance(dist), price(0), startLocation(sl), endLocation(el) {}
+    
+    virtual ~Booking() = default;
+    
+    virtual void displaySummary() const {
+        cout << "| From: " << setw(38) << left << startLocation << " |\n"
+             << "| To: " << setw(40) << left << endLocation << " |\n"
+             << "| Distance: " << setw(34) << left << string(to_string(distance) + " km") << " |\n"
+             << "| Driver: " << setw(36) << left << (driverName + " (" + vehicleType + ")") << " |\n"
+             << "| Estimated Price: " << setw(27) << left << string("Rs." + to_string(price)) << " |\n";
+    }
+    
+    virtual double calculatePrice() const { return price; }
+    
+    double getPrice() const { return price; }
+    double getDistance() const { return distance; }
+    string getDriverName() const { return driverName; }
+    string getVehicleType() const { return vehicleType; }
+    string getStartLocation() const { return startLocation; }
+    string getEndLocation() const { return endLocation; }
+};
+
+class TuktukBooking : public Booking {
+public:
+    TuktukBooking(const string& usn,const string& dn, double dist, const string& sl, const string& el)
+        : Booking(usn,dn, "Tuktuk", dist, sl, el) {
+        price = 20.0 + max(0.0, distance - 0.5) * 20.0;
+    }
+    
+    double calculatePrice() const override {
+        return 20.0 + max(0.0, distance - 0.5) * 20.0;
+    }
+};
+
+class TaxiBooking : public Booking {
+public:
+    TaxiBooking(const string&usn,const string& dn, double dist, const string& sl, const string& el)
+        : Booking(usn,dn, "Taxi", dist, sl, el) {
+        price = 100.0 + max(0.0, distance - 1.0) * 70.0;
+    }
+    
+    double calculatePrice() const override {
+        return 100.0 + max(0.0, distance - 1.0) * 70.0;
+    }
 };
 
 struct Driver {
@@ -66,26 +178,46 @@ struct Driver {
     string vehicleType; 
 };
 
+// Add to your data structures section
+struct LoginCredentials {
+    string username;
+    string password;
+    string role; // "user" or "driver"
+};
+
 struct User {
+    string username;
+    string password;
     string name;
     string phone;
     string aadhaar;
     string email;
+    string role; // "user" or "driver"
 };
 
-// Helper functions for input validation
+
+// Helper functions
 template<typename T>
 T getValidInput(const string& prompt, T minVal, T maxVal) {
     T value;
     while (true) {
         cout << prompt;
-        if (cin >> value && value >= minVal && value <= maxVal) {
-            cin.ignore(numeric_limits<streamsize>::max(), '\n');
-            return value;
+        try {
+            string input;
+            getline(cin, input);
+            stringstream ss(input);
+            if (ss >> value && ss.eof()) {  // Check if entire input was consumed
+                if (value >= minVal && value <= maxVal) {
+                    return value;
+                }
+                cout << "Input must be between " << minVal << " and " << maxVal << ".\n";
+            } else {
+                throw invalid_argument("Invalid input");
+            }
+        } catch (...) {
+            cout << "Invalid input. Please enter a valid number between " 
+                 << minVal << " and " << maxVal << ".\n";
         }
-        cout << "Invalid input. Please enter a value between " << minVal << " and " << maxVal << ".\n";
-        cin.clear();
-        cin.ignore(numeric_limits<streamsize>::max(), '\n');
     }
 }
 
@@ -155,7 +287,217 @@ double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
     double a = sin(dLat / 2) * sin(dLat / 2) + cos(lat1 * M_PI / 180.0) * cos(lat2 * M_PI / 180.0) * sin(dLon / 2) * sin(dLon / 2);
     return R * 2 * atan2(sqrt(a), sqrt(1 - a));
 }
+//start of login
+vector<LoginCredentials> loadAllCredentials() {
+    vector<LoginCredentials> credentials;
+    ifstream file("Users.csv");
+    if (!file.is_open()) return credentials;
 
+    string line;
+    while (getline(file, line)) {
+        try {
+            stringstream ss(line);
+            LoginCredentials cred;
+            string token;
+            
+            getline(ss, cred.username, ',');
+            getline(ss, cred.password, ',');
+            // Skip name, phone, aadhaar, email
+            for (int i = 0; i < 4; i++) getline(ss, token, ',');
+            getline(ss, cred.role, ',');
+            
+            credentials.push_back(cred);
+        } catch (...) {
+            continue;
+        }
+    }
+    return credentials;
+}
+
+
+string getAndValidatePassword() {
+    string password;
+    char ch;
+
+    while (true) {
+        password.clear();
+        bool hasUpper = false, hasLower = false, hasDigit = false;
+
+        cout << "Enter password (min 8 chars, with upper, lower, and number): ";
+
+        while ((ch = _getch()) != '\r') { // '\r' is Enter key on Windows
+            if (ch == '\b') { // Handle backspace
+                if (!password.empty()) {
+                    password.pop_back();
+                    cout << "\b \b"; // Erase the asterisk
+                }
+            }
+            else {
+                password.push_back(ch);
+                cout << '*';
+
+                // Check character types as we go
+                if (isupper(ch)) hasUpper = true;
+                if (islower(ch)) hasLower = true;
+                if (isdigit(ch)) hasDigit = true;
+            }
+        }
+        cout << endl;
+
+        // Validation check
+        bool isValid = true;
+
+        if (password.length() < 8) {
+            cout << "Error: Password must be at least 8 characters long\n";
+            isValid = false;
+        }
+
+        if (!hasUpper) {
+            cout << "Error: Password must contain at least one uppercase letter\n";
+            isValid = false;
+        }
+
+        if (!hasLower) {
+            cout << "Error: Password must contain at least one lowercase letter\n";
+            isValid = false;
+        }
+
+        if (!hasDigit) {
+            cout << "Error: Password must contain at least one digit (0-9)\n";
+            isValid = false;
+        }
+
+        if (isValid) {
+            return password;
+        }
+
+        cout << "Please try again.\n\n";
+    }
+}
+
+
+
+User loginUser(const vector<LoginCredentials>& allCredentials) {
+    while (true) {
+        cout << "\n+-------------------------------------+\n";
+        cout << "|               LOGIN                |\n";
+        cout << "+-------------------------------------+\n";
+        string username = getValidString("Username: ");
+        string password = getAndValidatePassword();
+        
+        for (const auto& cred : allCredentials) {
+            if (cred.username == username && cred.password == password) {
+                // Load full user details
+                ifstream file("Users.csv");
+                string line;
+                while (getline(file, line)) {
+                    stringstream ss(line);
+                    User user;
+                    getline(ss, user.username, ',');
+                    if (user.username == username) {
+                        getline(ss, user.password, ',');
+                        getline(ss, user.name, ',');
+                        getline(ss, user.phone, ',');
+                        getline(ss, user.aadhaar, ',');
+                        getline(ss, user.email, ',');
+                        getline(ss, user.role, ',');
+                        return user;
+                    }
+                }
+            }
+        }
+        cout << "Invalid username or password. Try again.\n";
+    }
+}
+
+
+
+User registerNewUser(const string& role) {
+    User newUser;
+    newUser.role = role;
+    
+    cout << "\n+-------------------------------------+\n";
+    cout << "|          NEW " << setw(10) << left << (role == "user" ? "USER" : "DRIVER") << " REGISTRATION       |\n";
+    cout << "+-------------------------------------+\n";
+    
+    newUser.username = getValidString("Choose a username: ");
+    newUser.password = getAndValidatePassword();
+    
+    if (role == "user") {
+        newUser.name = getValidString("Enter your full name: ");
+        newUser.phone = getValidString("Enter your phone number: ", validatePhone);
+        newUser.aadhaar = getValidString("Enter your Aadhaar number: ", validateAadhaar);
+        newUser.email = getValidString("Enter your email address: ", validateEmail);
+    } else { // driver
+        newUser.name = getValidString("Enter your full name: ");
+        newUser.phone = getValidString("Enter your phone number: ", validatePhone);
+        // Drivers might not need aadhaar/email
+        newUser.aadhaar = "N/A";
+        newUser.email = "N/A";
+    }
+    
+    // Save to CSV
+    ofstream file("Users.csv", ios::app);
+    if (file.is_open()) {
+        file << newUser.username << "," << newUser.password << ","
+             << newUser.name << "," << newUser.phone << ","
+             << newUser.aadhaar << "," << newUser.email << ","
+             << newUser.role << "\n";
+    }
+    
+    cout << "\nRegistration successful!\n";
+    return newUser;
+}
+
+
+User handleLogin(bool showWelcome = true) {
+    if (showWelcome) {
+        cout << "\n+-------------------------------------+\n";
+        cout << "|    WELCOME TO CAB BOOKING SYSTEM    |\n";
+        cout << "+-------------------------------------+\n";
+    }
+    
+    while (true) {
+        cout << "\n+-------------------------------------+\n";
+        cout << "| 1. User Login                      |\n";
+        cout << "| 2. Driver Login                    |\n";
+        cout << "| 3. Exit                            |\n";
+        cout << "+-------------------------------------+\n";
+        
+        int choice = getValidInput("Enter your choice (1-3): ", 1, 3);
+        
+        if (choice == 3) {
+            cout << "\n+-------------------------------------+\n";
+            cout << "|  THANK YOU FOR USING OUR SERVICE!  |\n";
+            cout << "|        HAVE A GREAT DAY!           |\n";
+            cout << "+-------------------------------------+\n";
+            exit(0);
+        }
+        
+        string role = (choice == 1) ? "user" : "driver";
+        
+        cout << "\n+-------------------------------------+\n";
+        cout << "| 1. Login to existing account      |\n";
+        cout << "| 2. Register new account           |\n";
+        cout << "| 3. Back                           |\n";
+        cout << "+-------------------------------------+\n";
+        
+        int authChoice = getValidInput("Enter your choice (1-3): ", 1, 3);
+        
+        if (authChoice == 3) continue;
+        
+        auto allCredentials = loadAllCredentials();
+        
+        if (authChoice == 1) {
+            return loginUser(allCredentials);
+        } else if (authChoice == 2) {
+            return registerNewUser(role);
+        }
+    }
+}
+
+
+//end of login 
 vector<Location> loadLocations() {
     vector<Location> locations;
     ifstream file("Locations.csv");
@@ -190,8 +532,8 @@ vector<Location> loadLocations() {
     return locations;
 }
 
-vector<RentalVehicle> loadRentalVehicles() {
-    vector<RentalVehicle> vehicles;
+vector<unique_ptr<RentalVehicle>> loadRentalVehicles() {
+    vector<unique_ptr<RentalVehicle>> vehicles;
     ifstream file("Vehicles.csv");
     if (!file.is_open()) {
         throw runtime_error("Could not open Vehicles.csv");
@@ -204,30 +546,33 @@ vector<RentalVehicle> loadRentalVehicles() {
     while (getline(file, line)) {
         try {
             stringstream ss(line);
-            RentalVehicle vehicle;
-            string token;
+            string type, modelAndColor, licensePlate, ownerName, contact, priceStr;
             
-            getline(ss, token, ',');
-            vehicle.type = token;
+            if (!getline(ss, type, ',') || 
+                !getline(ss, modelAndColor, ',') || 
+                !getline(ss, licensePlate, ',') || 
+                !getline(ss, ownerName, ',') || 
+                !getline(ss, contact, ',') || 
+                !getline(ss, priceStr)) {
+                cerr << "Warning: Skipping malformed vehicle entry (missing fields): " << line << endl;
+                continue;
+            }
+
+            double pricePerDay = stod(priceStr);
             
-            getline(ss, token, ',');
-            vehicle.model = token;
-            
-            getline(ss, token, ',');
-            vehicle.licensePlate = token;
-            
-            getline(ss, token, ',');
-            vehicle.ownerName = token;
-            
-            getline(ss, token, ',');
-            vehicle.contact = token;
-            
-            getline(ss, token, ',');
-            vehicle.pricePerDay = stod(token);
-            
-            vehicles.push_back(vehicle);
-        } catch (...) {
-            cerr << "Warning: Skipping malformed vehicle entry\n";
+            if (type == "Motorcycle") {
+                vehicles.emplace_back(make_unique<Motorcycle>(modelAndColor, licensePlate, ownerName, contact, pricePerDay));
+            } else if (type == "Hatchback") {
+                vehicles.emplace_back(make_unique<Hatchback>(modelAndColor, licensePlate, ownerName, contact, pricePerDay));
+            } else if (type == "Sedan") {
+                vehicles.emplace_back(make_unique<Sedan>(modelAndColor, licensePlate, ownerName, contact, pricePerDay));
+            } else if (type == "SUV") {
+                vehicles.emplace_back(make_unique<SUV>(modelAndColor, licensePlate, ownerName, contact, pricePerDay));
+            } else {
+                cerr << "Warning: Unknown vehicle type '" << type << "' in line: " << line << endl;
+            }
+        } catch (const exception& e) {
+            cerr << "Warning: Skipping malformed vehicle entry (" << e.what() << "): " << line << endl;
         }
     }
     return vehicles;
@@ -246,7 +591,7 @@ vector<Driver> loadDrivers() {
             stringstream ss(line);
             Driver drv;
             string token;
-            
+
             getline(ss, token, ',');
             drv.name = token;
             
@@ -289,6 +634,9 @@ User loadUserProfile() {
             stringstream ss(line);
             string token;
             
+            getline(ss,token,',');  // added username input
+            user.username = token;
+
             getline(ss, token, ',');
             user.name = token;
             
@@ -315,24 +663,74 @@ void saveUserProfile(const User& user) {
     file << user.name << "," << user.phone << "," << user.aadhaar << "," << user.email;
 }
 
-void saveHistory(const string& type, const string& driverName, const string& vehicleType, 
-                double distanceOrDays, double price, const string& startLocation, const string& endLocation) {
+void saveHistory(const string& username, const string& type, const string& driverName, 
+    const string& vehicleType, double distanceOrDays, double price, 
+    const string& startLocation, const string& endLocation) {
     string filename = (type == "BOOKING") ? "BookingHistory.csv" : "RentalHistory.csv";
     ofstream file(filename, ios::app);
     if (!file.is_open()) {
         throw runtime_error("Could not save history");
     }
-    
+
     time_t now = time(0);
     tm *ltm = localtime(&now);
+    file << username << ",";
     file << ltm->tm_year + 1900 << "-" << ltm->tm_mon + 1 << "-" << ltm->tm_mday << " ";
     file << ltm->tm_hour << ":" << ltm->tm_min << ":" << ltm->tm_sec << ","; 
     file << driverName << "," << vehicleType << "," << fixed << setprecision(2) 
-         << distanceOrDays << "," << price << "," << startLocation << "," << endLocation << endl;
+    << distanceOrDays << "," << price << "," << startLocation << "," << endLocation << endl;
+} // changed saveHistory
+
+void viewDriverBookings(const string& driverName) { //viewing driver booking
+    try {
+        ifstream file("BookingHistory.csv");
+        if (!file.is_open()) {
+            cout << "\nNo bookings found.\n";
+            return;
+        }
+
+        cout << "\n";
+        cout << "+------------------------------------------------------------------------------------------------+\n";
+        cout << "|                                  YOUR DRIVING HISTORY                                         |\n";
+        cout << "+---------------------+---------------+-----------+---------------------+-----------------------+\n";
+        cout << "| Date/Time          | User          | Price     | From                | To                   |\n";
+        cout << "+---------------------+---------------+-----------+---------------------+-----------------------+\n";
+
+        string line;
+        while (getline(file, line)) {
+            try {
+                stringstream ss(line);
+                string user, dateTime, driver, vehicle, from, to;
+                double distance, price;
+                char comma;
+                
+                getline(ss, user, ',');
+                getline(ss, dateTime, ',');
+                getline(ss, driver, ',');
+                if (driver != driverName) continue;
+                
+                getline(ss, vehicle, ',');
+                ss >> distance >> comma >> price >> comma;
+                getline(ss, from, ',');
+                getline(ss, to);
+                
+                cout << "| " << setw(19) << left << dateTime.substr(0, 16)
+                     << "| " << setw(13) << left << user
+                     << "| Rs." << setw(6) << left << fixed << setprecision(2) << price
+                     << "| " << setw(19) << left << from.substr(0, 19)
+                     << "| " << setw(21) << left << to.substr(0, 21) << "|\n";
+            } catch (...) {
+                continue;
+            }
+        }
+        cout << "+---------------------+---------------+-----------+---------------------+-----------------------+\n";
+    } catch (const exception& e) {
+        cerr << "Error: " << e.what() << endl;
+    }
 }
 
 // Feature functions
-void bookCab(const vector<Location>& locations, const vector<Driver>& drivers) {
+void bookCab(const vector<Location>& locations, const vector<Driver>& drivers,string& username) {
     try {
         cout << "\n";
         cout << "+-------------------------------------+\n";
@@ -453,21 +851,18 @@ void bookCab(const vector<Location>& locations, const vector<Driver>& drivers) {
         int driverIdx = (typeChar == 'T') ? availableTuktuks[choiceNum] : availableTaxis[choiceNum];
         const Driver& selectedDriver = drivers[driverIdx];
 
-        bool isTuktuk = (selectedDriver.vehicleType == "Tuktuk");
-        double price = isTuktuk ? 
-            (20.0 + max(0.0, distance - 0.5) * 20.0) : 
-            (100.0 + max(0.0, distance - 1.0) * 70.0);
+        unique_ptr<Booking> booking;
+        if (selectedDriver.vehicleType == "Tuktuk") {
+            booking = make_unique<TuktukBooking>(username,selectedDriver.name, distance, startLoc->name, endLoc->name);
+        } else {
+            booking = make_unique<TaxiBooking>(username,selectedDriver.name, distance, startLoc->name, endLoc->name);
+        }
 
         cout << "\n";
         cout << "+-----------------------------------------------+\n";
         cout << "|              BOOKING SUMMARY                 |\n";
         cout << "+-----------------------------------------------+\n";
-        cout << "| From: " << setw(38) << left << startLoc->name << " |\n";
-        cout << "| To: " << setw(40) << left << endLoc->name << " |\n";
-        cout << "| Distance: " << setw(34) << left << string(to_string(distance) + " km") << " |\n";
-        cout << "| Driver: " << setw(36) << left << (selectedDriver.name + " (" + selectedDriver.vehicleType + ")") << " |\n";
-        cout << "| Contact: " << setw(35) << left << selectedDriver.contact << " |\n";
-        cout << "| Estimated Price: " << setw(27) << left << string("Rs." + to_string(price)) << " |\n";
+        booking->displaySummary();
         cout << "+-----------------------------------------------+\n";
 
         if (getConfirmation("\nConfirm booking?")) {
@@ -477,8 +872,9 @@ void bookCab(const vector<Location>& locations, const vector<Driver>& drivers) {
             const_cast<Driver&>(selectedDriver).rating = 
                 min(5.0, max(0.0, (selectedDriver.rating + rating) / 2.0));
 
-            saveHistory("BOOKING", selectedDriver.name, selectedDriver.vehicleType, 
-                       distance, price, startLoc->name, endLoc->name);
+            saveHistory(username,"BOOKING", booking->getDriverName(), booking->getVehicleType(), 
+                       booking->getDistance(), booking->getPrice(), 
+                       booking->getStartLocation(), booking->getEndLocation());
             
             cout << "\n";
             cout << "+-----------------------------------------------+\n";
@@ -499,9 +895,8 @@ void bookCab(const vector<Location>& locations, const vector<Driver>& drivers) {
     cin.get();
 }
 
-void rentCab(const vector<RentalVehicle>& vehicles) {
+void rentCab(const vector<unique_ptr<RentalVehicle>>& vehicles,string& username) {
     try {
-        // Get vehicle type from user
         cout << "\n";
         cout << "+-------------------------------------+\n";
         cout << "|        VEHICLE TYPE OPTIONS       |\n";
@@ -523,10 +918,10 @@ void rentCab(const vector<RentalVehicle>& vehicles) {
         }
         
         // Filter vehicles by type
-        vector<RentalVehicle> availableVehicles;
+        vector<const RentalVehicle*> availableVehicles;
         for (const auto& vehicle : vehicles) {
-            if (vehicle.type == vehicleType) {
-                availableVehicles.push_back(vehicle);
+            if (vehicle->getType() == vehicleType) {
+                availableVehicles.push_back(vehicle.get());
             }
         }
         
@@ -535,60 +930,56 @@ void rentCab(const vector<RentalVehicle>& vehicles) {
             return;
         }
         
-        // Display available vehicles
         cout << "\n";
-        cout << "+------------------------------------------------------------------------------------------------+\n";
-        cout << "|                        AVAILABLE " << setw(20) << left << vehicleType + "S" << "                       |\n";
-        cout << "+-----+---------------------------------+-----------+----------------+------------+-------------+\n";
-        cout << "| ID  | Model (Color)                  | Plate     | Owner          | Contact    | Price/Day   |\n";
-        cout << "+-----+---------------------------------+-----------+----------------+------------+-------------+\n";
+        cout << "+----------------------------------------------------------------------------------------------------------+\n";
+        cout << "|                                     AVAILABLE " << setw(20) << left << vehicleType + "s" << "                                     |\n";
+        cout << "+-----+-------------------------------------+-----------+------------------+------------+-----------------+\n";
+        cout << "| ID  | Model (Color)                       | Plate     | Owner            | Contact    | Price/Day       |\n";
+        cout << "+-----+-------------------------------------+-----------+------------------+------------+-----------------+\n";
         
         for (int i = 0; i < availableVehicles.size(); ++i) {
             const auto& vehicle = availableVehicles[i];
             cout << "| " << setw(3) << left << i+1 << " | " 
-                 << setw(31) << left << vehicle.model << " | "
-                 << setw(9) << left << vehicle.licensePlate << " | "
-                 << setw(14) << left << vehicle.ownerName << " | "
-                 << setw(10) << left << vehicle.contact << " | "
-                 << "Rs." << setw(8) << left << fixed << setprecision(2) << vehicle.pricePerDay << " |\n";
+                 << setw(35) << left << vehicle->getModelAndColor() << " | "
+                 << setw(9) << left << vehicle->getLicensePlate() << " | "
+                 << setw(16) << left << vehicle->getOwnerName() << " | "
+                 << setw(10) << left << vehicle->getContact() << " | "
+                 << "Rs." << setw(12) << left << fixed << setprecision(2) << vehicle->getPricePerDay() << " |\n";
         }
-        cout << "+-----+---------------------------------+-----------+----------------+------------+-------------+\n";
+        cout << "+-----+-------------------------------------+-----------+------------------+------------+-----------------+\n";
         
-        // Get vehicle selection
         int vehicleChoice = getValidInput<int>("\nSelect vehicle (1-" + to_string(availableVehicles.size()) + "): ", 
                                             1, 
                                             static_cast<int>(availableVehicles.size()));
-        const RentalVehicle& selectedVehicle = availableVehicles[vehicleChoice-1];
+        const RentalVehicle* selectedVehicle = availableVehicles[vehicleChoice-1];
         
-        // Get rental duration
-        int days = getValidInput("Enter number of days (1-30): ", 1, 30);
-        double totalPrice = selectedVehicle.pricePerDay * days;
+        int days = getValidInput("Enter integer number of days (1-30): ", 1, 30);
+        double totalPrice = selectedVehicle->getPricePerDay() * days;
         
-        // Show rental summary
         cout << "\n";
-        cout << "+-----------------------------------------------+\n";
-        cout << "|              RENTAL SUMMARY                  |\n";
-        cout << "+-----------------------------------------------+\n";
-        cout << "| Vehicle Type: " << setw(30) << left << selectedVehicle.type << " |\n";
-        cout << "| Model: " << setw(37) << left << selectedVehicle.model << " |\n";
-        cout << "| License Plate: " << setw(29) << left << selectedVehicle.licensePlate << " |\n";
-        cout << "| Owner Name: " << setw(32) << left << selectedVehicle.ownerName << " |\n";
-        cout << "| Owner Contact: " << setw(29) << left << selectedVehicle.contact << " |\n";
-        cout << "| Duration: " << setw(34) << left << string(to_string(days) + " days") << " |\n";
-        cout << "| Price/Day: " << setw(33) << left << string("Rs." + to_string(selectedVehicle.pricePerDay)) << " |\n";
-        cout << "| Total Price: " << setw(31) << left << string("Rs." + to_string(totalPrice)) << " |\n";
-        cout << "+-----------------------------------------------+\n";
+        cout << "+-----------------------------------------------------+\n";
+        cout << "|                  RENTAL SUMMARY                    |\n";
+        cout << "+-----------------------------------------------------+\n";
+        cout << "| Vehicle Type: " << setw(38) << left << selectedVehicle->getType() << " |\n";
+        cout << "| Model (Color): " << setw(37) << left << selectedVehicle->getModelAndColor() << " |\n";
+        cout << "| License Plate: " << setw(37) << left << selectedVehicle->getLicensePlate() << " |\n";
+        cout << "| Owner Name: " << setw(40) << left << selectedVehicle->getOwnerName() << " |\n";
+        cout << "| Owner Contact: " << setw(37) << left << selectedVehicle->getContact() << " |\n";
+        cout << "| Duration: " << setw(42) << left << string(to_string(days) + " days") << " |\n";
+        cout << "| Price/Day: " << setw(41) << left << string("Rs." + to_string(selectedVehicle->getPricePerDay())) << " |\n";
+        cout << "| Total Price: " << setw(39) << left << string("Rs." + to_string(totalPrice)) << " |\n";
+        cout << "+-----------------------------------------------------+\n";
         
         if (getConfirmation("\nConfirm rental?")) {
-            saveHistory("RENTAL", "RENTAL", selectedVehicle.type + " - " + selectedVehicle.model, 
-                       days, totalPrice, "N/A", "N/A");
+            saveHistory(username, "RENTAL", selectedVehicle->getType() + " - " + selectedVehicle->getModelAndColor(), 
+                       "N/A",days, totalPrice, "N/A", "N/A");
             cout << "\n";
-            cout << "+-----------------------------------------------+\n";
-            cout << "|          RENTAL CONFIRMED!                  |\n";
-            cout << "+-----------------------------------------------+\n";
-            cout << "| Enjoy your " << setw(34) << left << selectedVehicle.model << " |\n";
-            cout << "| Owner Contact: " << setw(29) << left << selectedVehicle.contact << " |\n";
-            cout << "+-----------------------------------------------+\n";
+            cout << "+-----------------------------------------------------+\n";
+            cout << "|               RENTAL CONFIRMED!                    |\n";
+            cout << "+-----------------------------------------------------+\n";
+            cout << "| Enjoy your " << setw(42) << left << selectedVehicle->getModelAndColor() << " |\n";
+            cout << "| Owner Contact: " << setw(37) << left << selectedVehicle->getContact() << " |\n";
+            cout << "+-----------------------------------------------------+\n";
         } else {
             cout << "\nRental cancelled.\n";
         }
@@ -640,7 +1031,7 @@ void viewUserProfile(User& user) {
     cin.get();
 }
 
-void viewBookingHistory() {
+void viewBookingHistory(const string& username) {
     try {
         ifstream file("BookingHistory.csv");
         if (!file.is_open()) {
@@ -650,18 +1041,21 @@ void viewBookingHistory() {
 
         cout << "\n";
         cout << "+------------------------------------------------------------------------------------------------+\n";
-        cout << "|                                  CAB BOOKING HISTORY                                         |\n";
+        cout << "|                                  YOUR BOOKING HISTORY                                                 |\n";
         cout << "+---------------------+---------------+-----------+---------------------+-----------------------+\n";
-        cout << "| Date/Time          | Vehicle       | Price     | From                | To                   |\n";
+        cout << "| Date/Time           | Driver Name        | Contact   |Price     | From              | To                 |\n";
         cout << "+---------------------+---------------+-----------+---------------------+-----------------------+\n";
-
+        vector<Driver>drivers = loadDrivers();
         string line;
         while (getline(file, line)) {
             try {
                 stringstream ss(line);
-                string dateTime, driver, vehicle, from, to;
+                string user, dateTime, driver, vehicle, from, to,driverContact;
                 double distance, price;
                 char comma;
+                
+                getline(ss, user, ',');
+                if (user != username) continue;
                 
                 getline(ss, dateTime, ',');
                 getline(ss, driver, ',');
@@ -670,8 +1064,14 @@ void viewBookingHistory() {
                 getline(ss, from, ',');
                 getline(ss, to);
                 
-                cout << "| " << setw(19) << left << dateTime.substr(0, 16)
-                     << "| " << setw(13) << left << vehicle
+                for(int i=0;i<drivers.size();i++){
+                    if(drivers[i].name==driver){
+                        driverContact = drivers[i].contact; break;
+                    }
+                }
+                cout << "| " << setw(19) << left << dateTime.substr(0, 19)
+                     << "| " << setw(20) << left << driver 
+                     << "| " << setw(10) << left << driverContact.substr(0, 10)
                      << "| Rs." << setw(6) << left << fixed << setprecision(2) << price
                      << "| " << setw(19) << left << from.substr(0, 19)
                      << "| " << setw(21) << left << to.substr(0, 21) << "|\n";
@@ -683,13 +1083,9 @@ void viewBookingHistory() {
     } catch (const exception& e) {
         cerr << "Error: " << e.what() << endl;
     }
-    
-    cout << "\nPress Enter to continue...";
-    cin.ignore(numeric_limits<streamsize>::max(), '\n');
-    cin.get();
-}
+} //changed booking history
 
-void viewRentalHistory() {
+void viewRentalHistory(string username) {
     try {
         ifstream file("RentalHistory.csv");
         if (!file.is_open()) {
@@ -737,7 +1133,7 @@ void viewRentalHistory() {
     cin.get();
 }
 
-void viewHistoryMenu() {
+void viewHistoryMenu(string& username) {
     while (true) {
         cout << "\n";
         cout << "+-------------------------------------+\n";
@@ -752,10 +1148,10 @@ void viewHistoryMenu() {
         
         switch (choice) {
             case 1:
-                viewBookingHistory();
+                viewBookingHistory(username);
                 break;
             case 2:
-                viewRentalHistory();
+                viewRentalHistory(username);
                 break;
             case 3:
                 return;
@@ -772,69 +1168,85 @@ void displayWelcome() {
     cout << "========================================\n";
 }
 
+
+void showLogoutMessage() {
+    cout << "\n+-------------------------------------+\n";
+    cout << "|         LOGGED OUT SUCCESSFULLY       |\n";
+    cout << "|      Returning to login screen...     |\n";
+    cout << "+---------------------------------------+\n";
+    cout << "Press Enter to continue...";
+    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    cin.get();
+}
+
+
 int main() {
     try {
         displayWelcome();
         
+        // Handle login/registration
+        User currentUser = handleLogin(true);
+        
+        cout << "\nWelcome, " << currentUser.name << "!\n";
+
         vector<Location> locations = loadLocations();
-        vector<RentalVehicle> rentalVehicles = loadRentalVehicles();
+        vector<unique_ptr<RentalVehicle>> rentalVehicles = loadRentalVehicles();
         vector<Driver> drivers = loadDrivers();
         User user = loadUserProfile();
-        
-        if (user.name.empty()) {
-            cout << "\n";
-            cout << "+-------------------------------------+\n";
-            cout << "|        NEW USER REGISTRATION       |\n";
-            cout << "+-------------------------------------+\n";
-            user.name = getValidString("Enter your full name: ");
-            user.phone = getValidString("Enter your phone number: ", validatePhone);
-            user.aadhaar = getValidString("Enter your Aadhaar number: ", validateAadhaar);
-            user.email = getValidString("Enter your email address: ", validateEmail);
-            saveUserProfile(user);
-            cout << "\n";
-            cout << "+-------------------------------------+\n";
-            cout << "|   REGISTRATION COMPLETE!          |\n";
-            cout << "+-------------------------------------+\n";
-            cout << "| Welcome, " << setw(26) << left << user.name << " |\n";
-            cout << "+-------------------------------------+\n";
-        } else {
-            cout << "\nWelcome back, " << user.name << "!\n";
-        }
 
         while (true) {
-            cout << "\n";
-            cout << "========================================\n";
+            cout << "\n========================================\n";
             cout << "|       CAB BOOKING SYSTEM MENU       |\n";
             cout << "========================================\n";
-            cout << "| 1. Book a Cab                      |\n";
-            cout << "| 2. Rent a Vehicle                  |\n";
-            cout << "| 3. View/Edit Profile              |\n";
-            cout << "| 4. View History                   |\n";
-            cout << "| 5. Exit                           |\n";
+            
+            if (currentUser.role == "user") {
+                cout << "| 1. Book a Cab                      |\n";
+                cout << "| 2. Rent a Vehicle                  |\n";
+                cout << "| 3. View/Edit Profile               |\n";
+                cout << "| 4. View History                    |\n";
+                cout << "| 5. Logout                          |\n";
+                cout << "| 6. Exit                            |\n";
+            } else { // driver
+                cout << "| 1. View My Bookings               |\n";
+                cout << "| 2. View/Edit Profile              |\n";
+                cout << "| 3. Logout                         |\n";
+                cout << "| 4. Exit                           |\n";
+            }
+            
             cout << "========================================\n";
             
-            int choice = getValidInput("Enter your choice (1-5): ", 1, 5);
+            int maxChoice = currentUser.role == "user" ? 5 : 3;
+            int choice = getValidInput("Enter your choice (1-" + to_string(maxChoice) + "): ", 1, maxChoice);
             
-            switch (choice) {
-                case 1:
-                    bookCab(locations, drivers);
-                    break;
-                case 2:
-                    rentCab(rentalVehicles);
-                    break;
-                case 3:
-                    viewUserProfile(user);
-                    break;
-                case 4:
-                    viewHistoryMenu();
-                    break;
-                case 5:
-                    cout << "\n";
-                    cout << "+-------------------------------------+\n";
-                    cout << "|  THANK YOU FOR USING OUR SERVICE!  |\n";
-                    cout << "|        HAVE A GREAT DAY!           |\n";
-                    cout << "+-------------------------------------+\n";
-                    return 0;
+            if (currentUser.role == "user") {
+                switch (choice) {
+                    case 1: bookCab(locations, drivers, currentUser.username); break;
+                    case 2: rentCab(rentalVehicles, currentUser.username); break;
+                    case 3: viewUserProfile(currentUser); break;
+                    case 4: viewHistoryMenu(currentUser.username); break;
+                    case 5: showLogoutMessage(); currentUser = handleLogin(false); break;
+                    case 6: {
+                        cout << "\n+-------------------------------------+\n";
+                        cout << "|  THANK YOU FOR USING OUR SERVICE!  |\n";
+                        cout << "|        HAVE A GREAT DAY!           |\n";
+                        cout << "+---------------------------------------+\n";
+                        exit(0);
+                    }
+                    
+                }
+            } else {
+                switch (choice) {
+                    case 1: viewDriverBookings(currentUser.name); break;
+                    case 2: viewUserProfile(currentUser); break;
+                    case 3: showLogoutMessage(); currentUser = handleLogin(false); break;
+                    case 4: {
+                        cout << "\n+-------------------------------------+\n";
+                        cout << "|  THANK YOU FOR USING OUR SERVICE!  |\n";
+                        cout << "|        HAVE A GREAT DAY!           |\n";
+                        cout << "+---------------------------------------+\n";
+                        exit(0);
+                    }
+                }
             }
         }
     } catch (const exception& e) {
