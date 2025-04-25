@@ -1,0 +1,41 @@
+Vehicle Type,Model (Color),License Plate,Owner Name,Contact,Price Per Day
+Motorcycle,Royal Enfield Classic 350 (Black),AS01AB1234,Amit Kumar,7001234567,1350
+Motorcycle,Bajaj Pulsar 150 (Blue),AS01CD5678,Priya Sharma,7087654321,1200
+Motorcycle,TVS Apache RTR 160 (Red),AR01EF9012,Ravi Singh,7083578112,1300
+Motorcycle,Honda Hornet 2.0 (Grey),NL01GH3456,Ravi Kumar,7001234567,1250
+Motorcycle,Yamaha FZ-S FI (Matt Green),MN01IJ7890,Amit Sharma,7087654321,1400
+Motorcycle,Suzuki Gixxer SF (Black),AS01KL1234,Priya Devi,7234567890,1350
+Motorcycle,KTM Duke 200 (Orange),TR01MN5678,Subhash Chandra,7089123456,1500
+Motorcycle,Yamaha MT 15 (Blue),WB24OP9012,Sanjay Ghosh,7394561234,1450
+Motorcycle,Honda XBlade (Red),AS01QR3456,Anjali Rani,7876541234,1250
+Motorcycle,Bajaj Avenger 220 (Silver),AS01ST7890,Vijay Patel,7856789012,1400
+Hatchback,Maruti Suzuki Swift (Red),AS02AB1234,Shyam Sundar,7612345678,2800
+Hatchback,Hyundai i20 (White),AS02CD5678,Rina Khatun,7894321567,2900
+Hatchback,Volkswagen Polo (Blue),AR02EF9012,Pankaj Das,7483920567,3000
+Hatchback,Maruti Baleno (Grey),NL02GH3456,Kiran Barua,7324789012,2700
+Hatchback,Tata Altroz (Gold),AS02IJ7890,Manoj Barman,7623456789,3100
+Hatchback,Honda Jazz (Silver),MN02KL1234,Rahul Das,9123456789,2950
+Hatchback,Toyota Glanza (Black),TR02MN5678,Soniya Devi,9001234567,3000
+Hatchback,Renault Kwid (Blue),WB20OP9012,Bikash Sharma,9408765432,2500
+Hatchback,Datsun Redi-GO (Green),AS02QR3456,Geeta Barman,9298765432,2400
+Hatchback,Maruti Celerio (Brown),AS02ST7890,Amitava Ghosh,9334567890,2600
+Sedan,Hyundai Verna (White),AS03AB1234,Anupam Bhattacharya,9123456701,3600
+Sedan,Honda City (Silver),AS03CD5678,Sourav Sarkar,9401234567,3800
+Sedan,Maruti Ciaz (Brown),AR03EF9012,Tanuja Biswas,9734567890,3400
+Sedan,Skoda Slavia (Red),NL03GH3456,Suvendu Singha,9956789012,3900
+Sedan,Toyota Yaris (Grey),AS03IJ7890,Chirag Saha,9887654321,3700
+Sedan,Volkswagen Virtus (Blue),MN03KL1234,Tanushree Das,9701234567,4000
+Sedan,Hyundai Elantra (Black),AS03MN5678,Bikram Dey,9745678901,4100
+Sedan,Tata Tigor (White),TR03OP9012,Koushik Dutta,9612345678,3300
+Sedan,Skoda Rapid (Blue),WB22QR3456,Priyanka Dey,9786543210,3500
+Sedan,Renault Scala (Grey),AS03ST7890,Sayan Roy,9534123456,3250
+SUV,Tata Harrier (Black),AS04AB1234,Ramesh Choudhury,9123456780,5000
+SUV,Hyundai Creta (White),AS04CD5678,Debojit Sinha,9645678901,5200
+SUV,Mahindra XUV700 (Red),AR04EF9012,Rupal Bhattacharya,9186541234,5400
+SUV,Kia Seltos (Grey),NL04GH3456,Somnath Saha,9234567890,4700
+SUV,MG Hector (Blue),AS04IJ7890,Ajit Mondal,9001234567,5500
+SUV,Toyota Fortuner (Silver),MN04KL1234,Rohit Jha,9498765432,6000
+SUV,Skoda Kushaq (Orange),AS04MN5678,Madhusree Ghosh,9387654321,5300
+SUV,Volkswagen Taigun (Red),TR04OP9012,Alok Banerjee,9123456789,5100
+SUV,Nissan Magnite (White),WB18QR3456,Shubham Agarwal,9801234567,4600
+SUV,Renault Duster (Brown),AS04ST7890,Karan Patil,9908765432,4800
