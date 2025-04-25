@@ -1436,7 +1436,7 @@ int main() {
             if (currentUser.role == "user") {
                 cout << "| 1. Book a Cab                      |\n";
                 cout << "| 2. Rent a Vehicle                  |\n";
-                cout << "| 3. View/Edit Profile               |\n";
+                cout << "| 3. User Profile                    |\n";
                 cout << "| 4. View History                    |\n";
                 cout << "| 5. Logout                          |\n";
                 cout << "| 6. Exit                            |\n";
