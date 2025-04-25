@@ -45,13 +45,16 @@ UserName : No space only alphanumerical charecters and _
 check for uername correct duing login before password
 No duplication of User
 
+Profile :
+prompt 1 for profile info
+2 for password change 
+
+Password asked 3 times before exiting or changing
 
 
 
 ----------------------TO DO------------------------------
-Profile :
-prompt 1 for profile info
-2 for password change 
+
 
 Booking:
 End location of cab driver changes
