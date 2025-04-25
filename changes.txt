@@ -41,13 +41,14 @@ OPERATOR OVERLOADING IN viewUserProfile() check in ppt
 password astericks thing
 Logout option in main menu
 
-
-
-----------------------TO DO------------------------------
 UserName : No space only alphanumerical charecters and _
 check for uername correct duing login before password
 No duplication of User
 
+
+
+
+----------------------TO DO------------------------------
 Profile :
 prompt 1 for profile info
 2 for password change 
