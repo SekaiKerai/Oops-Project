@@ -15,7 +15,7 @@
 #include <iomanip>  
 #include <limits>   
 #include <memory>
-#include <conio.h>
+#include<conio.h>
 using namespace std;
 
 #ifndef M_PI
@@ -118,10 +118,10 @@ protected:
     string driverName;
     string vehicleType;
     double distance;
-    double price;
     string startLocation;
     string endLocation;
 public:
+    double price;
     Booking(const string&usn,const string& dn, const string& vt, double dist, const string& sl, const string& el)
         : driverName(dn), vehicleType(vt), distance(dist), price(0), startLocation(sl), endLocation(el) {}
     
@@ -264,6 +264,40 @@ bool validateEmail(const string& email) {
     return true;
 }
 
+string getValidUsername(const string& prompt) {
+    string username;
+    bool isValid;
+    cout << prompt; 
+
+    do {
+        
+        getline(cin, username);
+
+        username.erase(0, username.find_first_not_of(" \t\n\r\f\v"));
+        username.erase(username.find_last_not_of(" \t\n\r\f\v") + 1);
+
+        isValid = true;
+
+        for (char &c : username) {
+            c = tolower(c); 
+            if (!isalnum(c) && c != '.' && c != '_') {
+                cout << "❌ Invalid character '" << c << "'. Only letters (a-z), numbers (0-9), '.', and '_' are allowed.\n";
+                isValid = false;
+                break;
+            }
+        }
+
+        if (isValid && username.empty()) {
+            cout << "Username cannot be empty.\n";
+            isValid = false;
+        }
+
+    } while (!isValid);
+
+    return username;
+}
+
+
 bool getConfirmation(const string& prompt) {
     char response;
     while (true) {
@@ -287,33 +321,6 @@ double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
     double a = sin(dLat / 2) * sin(dLat / 2) + cos(lat1 * M_PI / 180.0) * cos(lat2 * M_PI / 180.0) * sin(dLon / 2) * sin(dLon / 2);
     return R * 2 * atan2(sqrt(a), sqrt(1 - a));
 }
-//start of login
-vector<LoginCredentials> loadAllCredentials() {
-    vector<LoginCredentials> credentials;
-    ifstream file("Users.csv");
-    if (!file.is_open()) return credentials;
-
-    string line;
-    while (getline(file, line)) {
-        try {
-            stringstream ss(line);
-            LoginCredentials cred;
-            string token;
-            
-            getline(ss, cred.username, ',');
-            getline(ss, cred.password, ',');
-            // Skip name, phone, aadhaar, email
-            for (int i = 0; i < 4; i++) getline(ss, token, ',');
-            getline(ss, cred.role, ',');
-            
-            credentials.push_back(cred);
-        } catch (...) {
-            continue;
-        }
-    }
-    return credentials;
-}
-
 
 string getAndValidatePassword() {
     string password;
@@ -376,18 +383,64 @@ string getAndValidatePassword() {
 }
 
 
+//start of login
+vector<LoginCredentials> loadAllCredentials() {
+    vector<LoginCredentials> credentials;
+    ifstream file("Users.csv");
+    if (!file.is_open()) return credentials;
+
+    string line;
+    while (getline(file, line)) {
+        try {
+            stringstream ss(line);
+            LoginCredentials cred;
+            string token;
+            
+            getline(ss, cred.username, ',');
+            getline(ss, cred.password, ',');
+            // Skip name, phone, aadhaar, email
+            for (int i = 0; i < 4; i++) getline(ss, token, ',');
+            getline(ss, cred.role, ',');
+            
+            credentials.push_back(cred);
+        } catch (...) {
+            continue;
+        }
+    }
+    return credentials;
+}
 
 User loginUser(const vector<LoginCredentials>& allCredentials) {
     while (true) {
         cout << "\n+-------------------------------------+\n";
         cout << "|               LOGIN                |\n";
         cout << "+-------------------------------------+\n";
-        string username = getValidString("Username: ");
+
+        
+        string username;
+        bool usernameExists = false;
+        while (true) {
+            username = getValidUsername("Username: ");
+            
+            
+            for (const auto& cred : allCredentials) {
+                if (cred.username == username) {
+                    usernameExists = true;
+                    break;
+                }
+            }
+            
+            if (usernameExists) break;
+            cout << "Username not found. Please try again.\n";
+        }
+
+        
         string password = getAndValidatePassword();
+
         
         for (const auto& cred : allCredentials) {
             if (cred.username == username && cred.password == password) {
-                // Load full user details
+                // Load full user details from Users.csv
                 ifstream file("Users.csv");
                 string line;
                 while (getline(file, line)) {
@@ -406,21 +459,36 @@ User loginUser(const vector<LoginCredentials>& allCredentials) {
                 }
             }
         }
-        cout << "Invalid username or password. Try again.\n";
+        
+        cout << "Invalid password. Try again.\n";
     }
 }
 
-
-
-User registerNewUser(const string& role) {
+User registerNewUser(const string& role, const vector<LoginCredentials>& allCredentials) {
     User newUser;
+    double lat,lon;
     newUser.role = role;
     
-    cout << "\n+-------------------------------------+\n";
+    cout << "\n+---------------------------------------------------------------+\n";
     cout << "|          NEW " << setw(10) << left << (role == "user" ? "USER" : "DRIVER") << " REGISTRATION       |\n";
-    cout << "+-------------------------------------+\n";
+    cout << "+-----------------------------------------------------------------+\n";
     
-    newUser.username = getValidString("Choose a username: ");
+    
+    bool usernameExists;
+    do {
+        usernameExists = false;
+        newUser.username = getValidUsername("Choose Username: ");
+        
+        // Check if username already exists
+        for (const auto& cred : allCredentials) {
+            if (cred.username == newUser.username) {
+                cout << "Username already exists. Please choose a different one.\n";
+                usernameExists = true;
+                break;
+            }
+        }
+    } while (usernameExists);
+    
     newUser.password = getAndValidatePassword();
     
     if (role == "user") {
@@ -431,9 +499,18 @@ User registerNewUser(const string& role) {
     } else { // driver
         newUser.name = getValidString("Enter your full name: ");
         newUser.phone = getValidString("Enter your phone number: ", validatePhone);
-        // Drivers might not need aadhaar/email
-        newUser.aadhaar = "N/A";
-        newUser.email = "N/A";
+        newUser.aadhaar = getValidString("Enter your Aadhaar number: ", validateAadhaar);
+        newUser.email = getValidString("Enter your email address: ", validateEmail);
+        int vehicleTypeChoice = getValidInput("Enter your vehicle type (1. Tuktuk, 2. Taxi): ",1,2);
+        if(vehicleTypeChoice==1){
+            newUser.role = "Tuktuk";
+        }
+        else{
+            newUser.role = "Taxi";
+        }
+        cout << "Enter Start location Latitude and Longitudes : "<<endl;
+        cout << "Latitude: "; cin>>lat;
+        cout<< "Longitude: "; cin>>lon;
     }
     
     // Save to CSV
@@ -444,12 +521,19 @@ User registerNewUser(const string& role) {
              << newUser.aadhaar << "," << newUser.email << ","
              << newUser.role << "\n";
     }
+    //default rating of 4.0
     
+    ofstream file2("Drivers.csv" , ios::app);
+    if(file2.is_open()){
+        file2 << newUser.name << "," << newUser.phone << " "
+                << "4.0" << "," << lat << "," << lon << ","
+                << newUser.role << endl;
+    }
     cout << "\nRegistration successful!\n";
     return newUser;
 }
 
-
+// New main menu for login/registration
 User handleLogin(bool showWelcome = true) {
     if (showWelcome) {
         cout << "\n+-------------------------------------+\n";
@@ -491,12 +575,10 @@ User handleLogin(bool showWelcome = true) {
         if (authChoice == 1) {
             return loginUser(allCredentials);
         } else if (authChoice == 2) {
-            return registerNewUser(role);
+            return registerNewUser(role,allCredentials);
         }
     }
 }
-
-
 //end of login 
 vector<Location> loadLocations() {
     vector<Location> locations;
@@ -656,11 +738,52 @@ User loadUserProfile() {
 }
 
 void saveUserProfile(const User& user) {
-    ofstream file("Users.csv");
-    if (!file.is_open()) {
-        throw runtime_error("Could not save user profile");
+    try {
+        // Read all users from the file
+        ifstream inFile("Users.csv");
+        vector<string> lines;
+        string line;
+        
+        while (getline(inFile, line)) {
+            lines.push_back(line);
+        }
+        inFile.close();
+
+        // Find and update the current user's record
+        bool userFound = false;
+        for (auto& record : lines) {
+            stringstream ss(record);
+            string username;
+            getline(ss, username, ',');
+            
+            if (username == user.username) {
+                // Reconstruct the line with updated user data
+                record = user.username + "," + 
+                         user.password + "," + 
+                         user.name + "," + 
+                         user.phone + "," + 
+                         user.aadhaar + "," + 
+                         user.email + "," + 
+                         user.role;
+                userFound = true;
+                break;
+            }
+        }
+
+        if (!userFound) {
+            throw runtime_error("User not found in database");
+        }
+
+        // Write all records back to the file
+        ofstream outFile("Users.csv");
+        for (const auto& record : lines) {
+            outFile << record << "\n";
+        }
+        outFile.close();
+
+    } catch (const exception& e) {
+        throw runtime_error("Failed to update user profile: " + string(e.what()));
     }
-    file << user.name << "," << user.phone << "," << user.aadhaar << "," << user.email;
 }
 
 void saveHistory(const string& username, const string& type, const string& driverName, 
@@ -851,11 +974,27 @@ void bookCab(const vector<Location>& locations, const vector<Driver>& drivers,st
         int driverIdx = (typeChar == 'T') ? availableTuktuks[choiceNum] : availableTaxis[choiceNum];
         const Driver& selectedDriver = drivers[driverIdx];
 
+
+        //adding feature for booking solo travel or sharing travel
+        cout << "\n+-------------------------------------+\n";
+        cout << "|          SELECT RIDE TYPE          |\n";
+        cout << "+-------------------------------------+\n";
+        cout << "| 1. Solo Ride (Full Price)         |\n";
+        cout << "| 2. Shared Ride (prices split equally) |\n";
+        cout << "+-------------------------------------+\n";
+        int rideType = getValidInput("Select ride type (1-2): ",1,2);
+        
         unique_ptr<Booking> booking;
         if (selectedDriver.vehicleType == "Tuktuk") {
             booking = make_unique<TuktukBooking>(username,selectedDriver.name, distance, startLoc->name, endLoc->name);
+            if(rideType == 2){
+                booking->price /= 4;
+            }
         } else {
             booking = make_unique<TaxiBooking>(username,selectedDriver.name, distance, startLoc->name, endLoc->name);
+            if(rideType == 2){
+                booking->price /= 4;
+            }
         }
 
         cout << "\n";
@@ -866,12 +1005,7 @@ void bookCab(const vector<Location>& locations, const vector<Driver>& drivers,st
         cout << "+-----------------------------------------------+\n";
 
         if (getConfirmation("\nConfirm booking?")) {
-            double rating = getValidInput("Rate your experience (0-5): ", 0.0, 5.0);
             
-            // Update driver rating (average with previous rating)
-            const_cast<Driver&>(selectedDriver).rating = 
-                min(5.0, max(0.0, (selectedDriver.rating + rating) / 2.0));
-
             saveHistory(username,"BOOKING", booking->getDriverName(), booking->getVehicleType(), 
                        booking->getDistance(), booking->getPrice(), 
                        booking->getStartLocation(), booking->getEndLocation());
@@ -883,6 +1017,14 @@ void bookCab(const vector<Location>& locations, const vector<Driver>& drivers,st
             cout << "| Your " << setw(39) << left << selectedDriver.vehicleType + " will arrive shortly." << " |\n";
             cout << "| Driver contact: " << setw(28) << left << selectedDriver.contact << " |\n";
             cout << "+-----------------------------------------------+\n";
+
+            double rating = getValidInput("Rate your driver (0-5): ", 0.0, 5.0);
+            
+            // Update driver rating (average with previous rating)
+            const_cast<Driver&>(selectedDriver).rating = 
+                min(5.0, max(0.0, (selectedDriver.rating + rating) / 2.0));
+
+            cout << "\n Thank you for your feedback!\n";
         } else {
             cout << "\nBooking cancelled.\n";
         }
@@ -994,10 +1136,11 @@ void rentCab(const vector<unique_ptr<RentalVehicle>>& vehicles,string& username)
 
 void viewUserProfile(User& user) {
     try {
-        cout << "\n";
+        cout << "\n";\
         cout << "+-----------------------------------------------+\n";
         cout << "|                USER PROFILE                  |\n";
         cout << "+-----------------------------------------------+\n";
+        cout << "| Username: " << setw(34) << left << user.username << " |\n";
         cout << "| 1. Name: " << setw(35) << left << user.name << " |\n";
         cout << "| 2. Phone: " << setw(34) << left << user.phone << " |\n";
         cout << "| 3. Aadhaar: " << setw(32) << left << user.aadhaar << " |\n";
@@ -1019,6 +1162,9 @@ void viewUserProfile(User& user) {
             string newEmail = getValidString("Enter new email [" + user.email + "]: ", validateEmail, true);
             if (!newEmail.empty()) user.email = newEmail;
             
+            string newPassword = getValidString("Enter new Password:");
+            if(!newPassword.empty()) user.password = newPassword;
+
             saveUserProfile(user);
             cout << "\nProfile updated successfully!\n";
         }
@@ -1094,29 +1240,31 @@ void viewRentalHistory(string username) {
         }
 
         cout << "\n";
-        cout << "+------------------------------------------------------------------------------------------------+\n";
-        cout << "|                                  VEHICLE RENTAL HISTORY                                       |\n";
-        cout << "+---------------------+---------------------------------+-----------+-----------------------------+\n";
-        cout << "| Date/Time          | Vehicle                        | Days      | Total Price                 |\n";
-        cout << "+---------------------+---------------------------------+-----------+-----------------------------+\n";
+        cout << "+--------------------------------------------------------------------------------------------------------+\n";
+        cout << "|                                  VEHICLE RENTAL HISTORY                                                |\n";
+        cout << "+---------------------+---------------------------------+-----------+--------------------------------------+\n";
+        cout << "| Date/Time           | Vehicle                                  | Days      | Total Price               |\n";
+        cout << "+---------------------+---------------------------------+-----------+------------------------------------+\n";
 
         string line;
         while (getline(file, line)) {
             try {
                 stringstream ss(line);
-                string dateTime, driver, vehicle, from, to;
+                string dateTime, typedetail, vehicle, from, to, usern;
                 double days, price;
                 char comma;
                 
+                getline(ss, usern, ',');
+                if(usern != username)continue;
                 getline(ss, dateTime, ',');
-                getline(ss, driver, ',');
+                getline(ss, typedetail, ',');
                 getline(ss, vehicle, ',');
                 ss >> days >> comma >> price >> comma;
                 getline(ss, from, ',');
                 getline(ss, to);
                 
-                cout << "| " << setw(19) << left << dateTime.substr(0, 16)
-                     << "| " << setw(31) << left << vehicle.substr(0, 31)
+                cout << "| " << setw(20) << left << dateTime.substr(0, 20)
+                     << "| " << setw(41) << left << typedetail.substr(0, 41)
                      << "| " << setw(9) << left << fixed << setprecision(0) << days
                      << "| Rs." << setw(25) << left << fixed << setprecision(2) << price << "|\n";
             } catch (...) {
@@ -1168,7 +1316,6 @@ void displayWelcome() {
     cout << "========================================\n";
 }
 
-
 void showLogoutMessage() {
     cout << "\n+-------------------------------------+\n";
     cout << "|         LOGGED OUT SUCCESSFULLY       |\n";
@@ -1178,7 +1325,6 @@ void showLogoutMessage() {
     cin.ignore(numeric_limits<streamsize>::max(), '\n');
     cin.get();
 }
-
 
 int main() {
     try {
@@ -1215,7 +1361,7 @@ int main() {
             
             cout << "========================================\n";
             
-            int maxChoice = currentUser.role == "user" ? 5 : 3;
+            int maxChoice = currentUser.role == "user" ? 6 : 4;
             int choice = getValidInput("Enter your choice (1-" + to_string(maxChoice) + "): ", 1, maxChoice);
             
             if (currentUser.role == "user") {

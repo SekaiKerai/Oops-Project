@@ -51,14 +51,25 @@ prompt 1 for profile info
 
 Password asked 3 times before exiting or changing
 
+Booking:
+End location of cab driver changes -- done
+end of day -> reset all values to original start
+rental and booking history -> added phone of owner and driver
 
+Driver reg
+phone number add in booking history so easy access for contact detail display and display for summary for every driver 
+const string& username, const string& type, 
+                const string& driverName, const string& driverPhone, // Add driverPhone
+                const string& vehicleType, double distanceOrDays, 
+                double price, const string& startLocation, 
+                const string& endLocation
+
+
+edit details in driver , will have to option to update his current start location
+original file of driver , copy of driver should keep update of everytime updating during booking
 
 ----------------------TO DO------------------------------
 
 
-Booking:
-End location of cab driver changes
-
-Driver reg
-users also will have drivers as role
-driver file will also have new driver - add unique id for all and prompt for start and end location during new reg of driver
+Later:
+if you want you can show owner contact in rental history

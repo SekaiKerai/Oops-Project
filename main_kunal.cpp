@@ -15,7 +15,10 @@
 #include <iomanip>  
 #include <limits>   
 #include <memory>
-#include<conio.h>
+#include <conio.h>
+#include <chrono>
+#include <sys/stat.h>
+#include <unordered_map>
 using namespace std;
 
 #ifndef M_PI
@@ -116,14 +119,15 @@ class Booking {
 protected:
     string username;
     string driverName;
+    string driverPhone;
     string vehicleType;
     double distance;
     string startLocation;
     string endLocation;
 public:
     double price;
-    Booking(const string&usn,const string& dn, const string& vt, double dist, const string& sl, const string& el)
-        : driverName(dn), vehicleType(vt), distance(dist), price(0), startLocation(sl), endLocation(el) {}
+    Booking(const string&usn,const string& dn,const string&dp, const string& vt, double dist, const string& sl, const string& el)
+        : driverName(dn), driverPhone(dp), vehicleType(vt), distance(dist), price(0), startLocation(sl), endLocation(el) {}
     
     virtual ~Booking() = default;
     
@@ -140,6 +144,7 @@ public:
     double getPrice() const { return price; }
     double getDistance() const { return distance; }
     string getDriverName() const { return driverName; }
+    string getPhone() const {return driverPhone;}
     string getVehicleType() const { return vehicleType; }
     string getStartLocation() const { return startLocation; }
     string getEndLocation() const { return endLocation; }
@@ -147,8 +152,8 @@ public:
 
 class TuktukBooking : public Booking {
 public:
-    TuktukBooking(const string& usn,const string& dn, double dist, const string& sl, const string& el)
-        : Booking(usn,dn, "Tuktuk", dist, sl, el) {
+    TuktukBooking(const string& usn,const string& dn,const string& dp, double dist, const string& sl, const string& el)
+        : Booking(usn, dn, dp, "Tuktuk", dist, sl, el) {
         price = 20.0 + max(0.0, distance - 0.5) * 20.0;
     }
     
@@ -159,8 +164,8 @@ public:
 
 class TaxiBooking : public Booking {
 public:
-    TaxiBooking(const string&usn,const string& dn, double dist, const string& sl, const string& el)
-        : Booking(usn,dn, "Taxi", dist, sl, el) {
+    TaxiBooking(const string&usn,const string& dn,const string& dp, double dist, const string& sl, const string& el)
+        : Booking(usn,dn, dp, "Taxi", dist, sl, el) {
         price = 100.0 + max(0.0, distance - 1.0) * 70.0;
     }
     
@@ -176,6 +181,11 @@ struct Driver {
     double lat;
     double lon;
     string vehicleType; 
+
+    void updateLocation(double newLat, double newLon) {
+        lat = newLat;
+        lon = newLon;
+    }
 };
 
 // Add to your data structures section
@@ -405,7 +415,120 @@ string getPassword(const string& prompt = "Enter password: ") {
     return password;
 }
 
+//function that resets the driver locations after 4 am
+void resetDriverLocations() {
+    // Check if it's 4 AM or later
+    time_t now = time(0);
+    tm* local = localtime(&now);
+    if (local->tm_hour < 4) return;
 
+    // Check if already reset today
+    struct stat fileInfo;
+    stat("Drivers.csv", &fileInfo);
+    tm* modified = localtime(&fileInfo.st_mtime);
+    if (modified->tm_mday == local->tm_mday && modified->tm_hour >= 4) return;
+
+    // Read original locations
+    std::ifstream orig("OriginalDrivers.csv");
+    std::string line;
+    std::unordered_map<std::string, std::pair<std::string, std::string>> originalLocs;
+    
+    while (getline(orig, line)) {
+        std::istringstream ss(line);
+        std::string name, phone, rating, lat, lon, type;
+        getline(ss, name, ',');
+        getline(ss, phone, ',');
+        getline(ss, rating, ',');
+        getline(ss, lat, ',');
+        getline(ss, lon, ',');
+        getline(ss, type);
+        originalLocs[phone] = {lat, lon};
+    }
+
+    // Update current file
+    std::ifstream in("Drivers.csv");
+    std::ostringstream updated;
+    
+    while (getline(in, line)) {
+        std::istringstream ss(line);
+        std::string name, phone, rating, lat, lon, type;
+        
+        getline(ss, name, ',');
+        getline(ss, phone, ',');
+        getline(ss, rating, ',');
+        getline(ss, lat, ',');
+        getline(ss, lon, ',');
+        getline(ss, type);
+
+        if (originalLocs.count(phone)) {
+            updated << name << "," << phone << "," << rating << ","
+                   << originalLocs[phone].first << "," 
+                   << originalLocs[phone].second << "," 
+                   << type << "\n";
+        } else {
+            updated << line << "\n"; // Keep unchanged if no original found
+        }
+    }
+
+    // Write back the updated data
+    std::ofstream("Drivers.csv") << updated.str();
+}
+
+//update a driver by searching his phone number in file and update his lat,lon during updating profile of driver
+bool updateDriverLocation(const std::string& phone, double newLat, double newLon) {
+    // Read all drivers from file
+    std::ifstream inFile("Drivers.csv");
+    if (!inFile.is_open()) {
+        return false;
+    }
+
+    std::vector<Driver> drivers;
+    std::string line;
+    bool driverFound = false;
+
+    while (std::getline(inFile, line)) {
+        std::stringstream ss(line);
+        Driver drv;
+        std::string token;
+
+        // Parse CSV line
+        std::getline(ss, drv.name, ',');
+        std::getline(ss, drv.contact, ',');
+        std::getline(ss, token, ',');
+        drv.rating = std::stod(token);
+        std::getline(ss, token, ',');
+        drv.lat = std::stod(token);
+        std::getline(ss, token, ',');
+        drv.lon = std::stod(token);
+        std::getline(ss, drv.vehicleType);
+
+        // Update if phone matches
+        if (drv.contact == phone) {
+            drv.lat = newLat;
+            drv.lon = newLon;
+            driverFound = true;
+        }
+        drivers.push_back(drv);
+    }
+    inFile.close();
+
+    if (!driverFound) {
+        return false;
+    }
+
+    // Write updated data back to file
+    std::ofstream outFile("Drivers.csv");
+    for (const auto& drv : drivers) {
+        outFile << drv.name << ","
+                << drv.contact << ","
+                << drv.rating << ","
+                << drv.lat << ","
+                << drv.lon << ","
+                << drv.vehicleType << "\n";
+    }
+
+    return true;
+}
 
 //start of login
 vector<LoginCredentials> loadAllCredentials() {
@@ -501,11 +624,12 @@ User loginUser(const vector<LoginCredentials>& allCredentials) {
 
 User registerNewUser(const string& role, const vector<LoginCredentials>& allCredentials) {
     User newUser;
+    double lat,lon;
     newUser.role = role;
     
-    cout << "\n+-------------------------------------+\n";
+    cout << "\n+--------------------------------------------+\n";
     cout << "|          NEW " << setw(10) << left << (role == "user" ? "USER" : "DRIVER") << " REGISTRATION       |\n";
-    cout << "+-------------------------------------+\n";
+    cout << "+----------------------------------------------+\n";
     
     
     bool usernameExists;
@@ -533,8 +657,19 @@ User registerNewUser(const string& role, const vector<LoginCredentials>& allCred
     } else { // driver
         newUser.name = getValidString("Enter your full name: ");
         newUser.phone = getValidString("Enter your phone number: ", validatePhone);
-        newUser.aadhaar = "N/A";
-        newUser.email = "N/A";
+        newUser.aadhaar = getValidString("Enter your Aadhaar number: ", validateAadhaar);
+        newUser.email = getValidString("Enter your email address: ", validateEmail);
+        int vehicleTypeChoice = getValidInput("Enter your vehicle type (1. Tuktuk, 2. Taxi): ",1,2);
+        if(vehicleTypeChoice==1){
+            newUser.role = "Tuktuk";
+        }
+        else{
+            newUser.role = "Taxi";
+        }
+        cout << "Enter Start location Latitude and Longitudes : "<<endl;
+        cout << "NOTE: Read the Manual for more details about Latitude and Longitude "<<endl;
+        cout << "Latitude: "; cin>>lat;
+        cout<< "Longitude: "; cin>>lon;
     }
     
     // Save to CSV
@@ -545,7 +680,14 @@ User registerNewUser(const string& role, const vector<LoginCredentials>& allCred
              << newUser.aadhaar << "," << newUser.email << ","
              << newUser.role << "\n";
     }
+    //default rating of 4.0
     
+    ofstream file2("Drivers.csv" , ios::app);
+    if(file2.is_open()){
+        file2 << newUser.name << "," << newUser.phone << ","
+                << "4.0" << "," << lat << "," << lon << ","
+                << newUser.role << "\n";
+    }
     cout << "\nRegistration successful!\n";
     return newUser;
 }
@@ -679,44 +821,102 @@ vector<unique_ptr<RentalVehicle>> loadRentalVehicles() {
     return vehicles;
 }
 
+// vector<Driver> loadDrivers() {
+//     vector<Driver> drivers;
+//     ifstream file("Drivers.csv");
+//     if (!file.is_open()) {
+//         throw runtime_error("Could not open Drivers.csv");
+//     }
+
+//     string line;
+//     while (getline(file, line)) {
+//         try {
+//             stringstream ss(line);
+//             Driver drv;
+//             string token;
+
+//             getline(ss, token, ',');
+//             drv.name = token;
+            
+//             getline(ss, token, ',');
+//             drv.contact = token;
+            
+//             getline(ss, token, ',');
+//             drv.rating = stod(token);
+//             if (drv.rating < 0 || drv.rating > 5) {
+//                 drv.rating = 4.0; // Default if invalid
+//             }
+            
+//             getline(ss, token, ',');
+//             drv.lat = stod(token);
+            
+//             getline(ss, token, ',');
+//             drv.lon = stod(token);
+            
+//             getline(ss, token, ',');
+//             drv.vehicleType = token;
+            
+//             drivers.push_back(drv);
+//         } catch (...) {
+//             cerr << "Warning: Skipping malformed driver entry\n";
+//         }
+//     }
+//     return drivers;
+// }
+
 vector<Driver> loadDrivers() {
     vector<Driver> drivers;
     ifstream file("Drivers.csv");
+    
     if (!file.is_open()) {
         throw runtime_error("Could not open Drivers.csv");
     }
 
     string line;
     while (getline(file, line)) {
+        // Skip empty lines or whitespace-only lines
+        if (line.find_first_not_of(" \t\n\r\v\f") == string::npos) {
+            cerr << "Skipping empty line" << endl;
+            continue;
+        }
+
+        // Remove trailing whitespace
+        line.erase(line.find_last_not_of(" \t\n\r\v\f") + 1);
+
         try {
             stringstream ss(line);
             Driver drv;
             string token;
 
-            getline(ss, token, ',');
-            drv.name = token;
-            
-            getline(ss, token, ',');
-            drv.contact = token;
-            
-            getline(ss, token, ',');
+            // Parse name
+            if (!getline(ss, drv.name, ',')) throw runtime_error("Missing name");
+
+            // Parse phone
+            if (!getline(ss, drv.contact, ',')) throw runtime_error("Missing phone");
+
+            // Parse rating
+            if (!getline(ss, token, ',')) throw runtime_error("Missing rating");
             drv.rating = stod(token);
-            if (drv.rating < 0 || drv.rating > 5) {
-                drv.rating = 4.0; // Default if invalid
-            }
-            
-            getline(ss, token, ',');
+            drv.rating = max(0.0, min(5.0, drv.rating)); // Clamp to 0-5
+
+            // Parse latitude
+            if (!getline(ss, token, ',')) throw runtime_error("Missing latitude");
             drv.lat = stod(token);
-            
-            getline(ss, token, ',');
+
+            // Parse longitude
+            if (!getline(ss, token, ',')) throw runtime_error("Missing longitude");
             drv.lon = stod(token);
-            
-            getline(ss, token, ',');
-            drv.vehicleType = token;
-            
+
+            // Parse vehicle type
+            if (!getline(ss, drv.vehicleType)) throw runtime_error("Missing vehicle type");
+
+            // Check for extra data
+            if (ss >> token) throw runtime_error("Extra data in record");
+
             drivers.push_back(drv);
-        } catch (...) {
-            cerr << "Warning: Skipping malformed driver entry\n";
+        } catch (const exception& e) {
+            cerr << "Warning: Skipping malformed driver entry - " << e.what() 
+                 << " in line: " << line << endl;
         }
     }
     return drivers;
@@ -805,23 +1005,36 @@ void saveUserProfile(const User& user) {
     }
 }
 
-void saveHistory(const string& username, const string& type, const string& driverName, 
-    const string& vehicleType, double distanceOrDays, double price, 
-    const string& startLocation, const string& endLocation) {
-    string filename = (type == "BOOKING") ? "BookingHistory.csv" : "RentalHistory.csv";
-    ofstream file(filename, ios::app);
-    if (!file.is_open()) {
-        throw runtime_error("Could not save history");
-    }
+void saveHistory(const string& username, const string& type, 
+    const string& driverName, const string& driverPhone,
+    const string& vehicleType, double distanceOrDays, 
+    double price, const string& startLocation, 
+    const string& endLocation) {
+string filename = (type == "BOOKING") ? "BookingHistory.csv" : "RentalHistory.csv";
+ofstream file(filename, ios::app);
+if (!file.is_open()) {
+throw runtime_error("Could not save history");
+}
 
-    time_t now = time(0);
-    tm *ltm = localtime(&now);
-    file << username << ",";
-    file << ltm->tm_year + 1900 << "-" << ltm->tm_mon + 1 << "-" << ltm->tm_mday << " ";
-    file << ltm->tm_hour << ":" << ltm->tm_min << ":" << ltm->tm_sec << ","; 
-    file << driverName << "," << vehicleType << "," << fixed << setprecision(2) 
-    << distanceOrDays << "," << price << "," << startLocation << "," << endLocation << endl;
-} // changed saveHistory
+time_t now = time(0);
+tm *ltm = localtime(&now);
+
+// Write all fields including username
+file << username << ","  // Added username as first field
+<< ltm->tm_year + 1900 << "-" 
+<< setw(2) << setfill('0') << ltm->tm_mon + 1 << "-"
+<< setw(2) << setfill('0') << ltm->tm_mday << " "
+<< setw(2) << setfill('0') << ltm->tm_hour << ":"
+<< setw(2) << setfill('0') << ltm->tm_min << ":"
+<< setw(2) << setfill('0') << ltm->tm_sec << ","
+<< driverName << ","
+<< driverPhone << ","
+<< vehicleType << ","
+<< fixed << setprecision(2) << distanceOrDays << ","
+<< price << ","
+<< startLocation << ","
+<< endLocation << endl;
+}// changed saveHistory
 
 void viewDriverBookings(const string& driverName) { //viewing driver booking
     try {
@@ -868,6 +1081,59 @@ void viewDriverBookings(const string& driverName) { //viewing driver booking
         cout << "+---------------------+---------------+-----------+---------------------+-----------------------+\n";
     } catch (const exception& e) {
         cerr << "Error: " << e.what() << endl;
+    }
+}
+
+//add driver in file - adds the updated driver location after each booking by user
+void updateDriverInFile(const Driver& updatedDriver) {
+    // Read all drivers from file
+    ifstream inFile("Drivers.csv");
+    vector<string> lines;
+    string line;
+    
+    // Read all lines (assuming no header in file)
+    while (getline(inFile, line)) {
+        lines.push_back(line);
+    }
+    inFile.close();
+
+    // Find and update the specific driver
+    bool driverFound = false;
+    for (auto& record : lines) {
+        stringstream ss(record);
+        string name, phone, rating, lat, lon, type;
+        
+        // Parse the existing record
+        getline(ss, name, ',');
+        getline(ss, phone, ',');
+        getline(ss, rating, ',');
+        getline(ss, lat, ',');
+        getline(ss, lon, ',');
+        getline(ss, type);
+
+        if (phone == updatedDriver.contact) {
+            // Rebuild the line with updated location
+            stringstream newRecord;
+            newRecord << name << ","
+                      << phone << ","
+                      << rating << ","
+                      << updatedDriver.lat << ","
+                      << updatedDriver.lon << ","
+                      << type;
+            record = newRecord.str();
+            driverFound = true;
+            break;
+        }
+    }
+
+    if (!driverFound) {
+        throw runtime_error("Driver with phone " + updatedDriver.contact + " not found in database");
+    }
+
+    // Write all records back to file
+    ofstream outFile("Drivers.csv");
+    for (const auto& record : lines) {
+        outFile << record << "\n";
     }
 }
 
@@ -1005,12 +1271,12 @@ void bookCab(const vector<Location>& locations, const vector<Driver>& drivers,st
         
         unique_ptr<Booking> booking;
         if (selectedDriver.vehicleType == "Tuktuk") {
-            booking = make_unique<TuktukBooking>(username,selectedDriver.name, distance, startLoc->name, endLoc->name);
+            booking = make_unique<TuktukBooking>(username,selectedDriver.name,selectedDriver.contact, distance, startLoc->name, endLoc->name);
             if(rideType == 2){
                 booking->price /= 4;
             }
         } else {
-            booking = make_unique<TaxiBooking>(username,selectedDriver.name, distance, startLoc->name, endLoc->name);
+            booking = make_unique<TaxiBooking>(username,selectedDriver.name,selectedDriver.contact, distance, startLoc->name, endLoc->name);
             if(rideType == 2){
                 booking->price /= 4;
             }
@@ -1025,9 +1291,15 @@ void bookCab(const vector<Location>& locations, const vector<Driver>& drivers,st
 
         if (getConfirmation("\nConfirm booking?")) {
             
-            saveHistory(username,"BOOKING", booking->getDriverName(), booking->getVehicleType(), 
+            saveHistory(username,"BOOKING", booking->getDriverName(),booking->getPhone(), booking->getVehicleType(), 
                        booking->getDistance(), booking->getPrice(), 
                        booking->getStartLocation(), booking->getEndLocation());
+
+            // update driver location start = end
+            const_cast<Driver&>(selectedDriver).lat = endLoc->lat;
+            const_cast<Driver&>(selectedDriver).lon = endLoc->lon;
+            //update this in driver.csv
+            updateDriverInFile(selectedDriver);
             
             cout << "\n";
             cout << "+-----------------------------------------------+\n";
@@ -1132,7 +1404,7 @@ void rentCab(const vector<unique_ptr<RentalVehicle>>& vehicles,string& username)
         cout << "+-----------------------------------------------------+\n";
         
         if (getConfirmation("\nConfirm rental?")) {
-            saveHistory(username, "RENTAL", selectedVehicle->getType() + " - " + selectedVehicle->getModelAndColor(), 
+            saveHistory(username, "RENTAL", selectedVehicle->getType() + " - " + selectedVehicle->getModelAndColor(),  selectedVehicle->getContact(),
                        "N/A",days, totalPrice, "N/A", "N/A");
             cout << "\n";
             cout << "+-----------------------------------------------------+\n";
@@ -1194,6 +1466,16 @@ void viewUserProfile(User& user) {
                     if (!newEmail.empty()) user.email = newEmail;
                     
                     saveUserProfile(user);
+
+                    if(user.role!="user"){
+                        double lat,lon;
+                        if(getConfirmation("\nWould you like to change your start location?")){
+                            cout << "NOTE: Read the Manual for more details about Latitude and Longitude "<<endl;
+                            cout << "Latitude: "; cin>>lat;
+                            cout<< "Longitude: "; cin>>lon;
+                        }
+                        updateDriverLocation(user.phone,lat,lon);
+                    }
                     cout << "\nProfile updated successfully!\n";
                     break;
                 }
@@ -1293,16 +1575,13 @@ void viewBookingHistory(const string& username) {
                 
                 getline(ss, dateTime, ',');
                 getline(ss, driver, ',');
+                getline(ss, driverContact,',');
                 getline(ss, vehicle, ',');
                 ss >> distance >> comma >> price >> comma;
                 getline(ss, from, ',');
                 getline(ss, to);
-                
-                for(int i=0;i<drivers.size();i++){
-                    if(drivers[i].name==driver){
-                        driverContact = drivers[i].contact; break;
-                    }
-                }
+
+
                 cout << "| " << setw(19) << left << dateTime.substr(0, 19)
                      << "| " << setw(20) << left << driver 
                      << "| " << setw(10) << left << driverContact.substr(0, 10)
@@ -1338,7 +1617,7 @@ void viewRentalHistory(string username) {
         while (getline(file, line)) {
             try {
                 stringstream ss(line);
-                string dateTime, typedetail, vehicle, from, to, usern;
+                string dateTime, typedetail, vehicle,contact, from, to, usern;
                 double days, price;
                 char comma;
                 
@@ -1346,6 +1625,7 @@ void viewRentalHistory(string username) {
                 if(usern != username)continue;
                 getline(ss, dateTime, ',');
                 getline(ss, typedetail, ',');
+                getline(ss, contact, ',');
                 getline(ss, vehicle, ',');
                 ss >> days >> comma >> price >> comma;
                 getline(ss, from, ',');
@@ -1415,6 +1695,7 @@ void showLogoutMessage() {
 }
 
 int main() {
+    resetDriverLocations();
     try {
         displayWelcome();
         
