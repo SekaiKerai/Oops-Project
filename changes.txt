@@ -53,7 +53,8 @@ Profile :
 prompt 1 for profile info
 2 for password change 
 
-
+Booking:
+End location of cab driver changes
 
 Driver reg
 users also will have drivers as role

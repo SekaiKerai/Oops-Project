@@ -322,7 +322,7 @@ double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
     return R * 2 * atan2(sqrt(a), sqrt(1 - a));
 }
 
-string getAndValidatePassword() {
+string getAndValidatePassword(const string& prompt = "Enter password (min 8 chars, with upper, lower, and number): ") {
     string password;
     char ch;
 
@@ -330,20 +330,19 @@ string getAndValidatePassword() {
         password.clear();
         bool hasUpper = false, hasLower = false, hasDigit = false;
 
-        cout << "Enter password (min 8 chars, with upper, lower, and number): ";
+        cout << prompt;
 
-        while ((ch = _getch()) != '\r') { // '\r' is Enter key on Windows
-            if (ch == '\b') { // Handle backspace
+        while ((ch = _getch()) != '\r') {
+            if (ch == '\b') {
                 if (!password.empty()) {
                     password.pop_back();
-                    cout << "\b \b"; // Erase the asterisk
+                    cout << "\b \b";
                 }
             }
             else {
                 password.push_back(ch);
                 cout << '*';
 
-                // Check character types as we go
                 if (isupper(ch)) hasUpper = true;
                 if (islower(ch)) hasLower = true;
                 if (isdigit(ch)) hasDigit = true;
@@ -383,6 +382,31 @@ string getAndValidatePassword() {
 }
 
 
+string getPassword(const string& prompt = "Enter password: ") {
+    string password;
+    char ch;
+    
+    cout << prompt;
+    
+    while ((ch = _getch()) != '\r') { // '\r' is Enter key on Windows
+        if (ch == '\b') { // Handle backspace
+            if (!password.empty()) {
+                password.pop_back();
+                cout << "\b \b"; // Erase the asterisk
+            }
+        }
+        else {
+            password.push_back(ch);
+            cout << '*';
+        }
+    }
+    cout << endl;
+    
+    return password;
+}
+
+
+
 //start of login
 vector<LoginCredentials> loadAllCredentials() {
     vector<LoginCredentials> credentials;
@@ -416,12 +440,10 @@ User loginUser(const vector<LoginCredentials>& allCredentials) {
         cout << "|               LOGIN                |\n";
         cout << "+-------------------------------------+\n";
 
-        
         string username;
         bool usernameExists = false;
         while (true) {
             username = getValidUsername("Username: ");
-            
             
             for (const auto& cred : allCredentials) {
                 if (cred.username == username) {
@@ -434,33 +456,46 @@ User loginUser(const vector<LoginCredentials>& allCredentials) {
             cout << "Username not found. Please try again.\n";
         }
 
+        // Password attempt tracking
+        const int MAX_ATTEMPTS = 3;
+        int attempts_remaining = MAX_ATTEMPTS;
         
-        string password = getAndValidatePassword();
-
-        
-        for (const auto& cred : allCredentials) {
-            if (cred.username == username && cred.password == password) {
-                // Load full user details from Users.csv
-                ifstream file("Users.csv");
-                string line;
-                while (getline(file, line)) {
-                    stringstream ss(line);
-                    User user;
-                    getline(ss, user.username, ',');
-                    if (user.username == username) {
-                        getline(ss, user.password, ',');
-                        getline(ss, user.name, ',');
-                        getline(ss, user.phone, ',');
-                        getline(ss, user.aadhaar, ',');
-                        getline(ss, user.email, ',');
-                        getline(ss, user.role, ',');
-                        return user;
+        while (attempts_remaining > 0) {
+            string password = getPassword();
+            
+            for (const auto& cred : allCredentials) {
+                if (cred.username == username && cred.password == password) {
+                    // Load full user details from Users.csv
+                    ifstream file("Users.csv");
+                    string line;
+                    while (getline(file, line)) {
+                        stringstream ss(line);
+                        User user;
+                        getline(ss, user.username, ',');
+                        if (user.username == username) {
+                            getline(ss, user.password, ',');
+                            getline(ss, user.name, ',');
+                            getline(ss, user.phone, ',');
+                            getline(ss, user.aadhaar, ',');
+                            getline(ss, user.email, ',');
+                            getline(ss, user.role, ',');
+                            return user;
+                        }
                     }
                 }
             }
+            
+            attempts_remaining--;
+            cout << "Invalid password. Attempts remaining: " << attempts_remaining << "\n";
         }
         
-        cout << "Invalid password. Try again.\n";
+        // If we get here, all attempts were used
+        cout << "\n+-------------------------------------+\n";
+        cout << "|        TOO MANY FAILED ATTEMPTS!      |\n";
+        cout << "|     THANK YOU FOR USING OUR SERVICE!  |\n";
+        cout << "|           HAVE A GREAT DAY!           |\n";
+        cout << "+-------------------------------------+\n";
+        exit(0);
     }
 }
 
@@ -561,6 +596,8 @@ User handleLogin(bool showWelcome = true) {
         }
     }
 }
+
+
 //end of login 
 vector<Location> loadLocations() {
     vector<Location> locations;
@@ -1118,46 +1155,115 @@ void rentCab(const vector<unique_ptr<RentalVehicle>>& vehicles,string& username)
 
 void viewUserProfile(User& user) {
     try {
-        cout << "\n";\
-        cout << "+-----------------------------------------------+\n";
-        cout << "|                USER PROFILE                  |\n";
-        cout << "+-----------------------------------------------+\n";
-        cout << "| Username: " << setw(34) << left << user.username << " |\n";
-        cout << "| 1. Name: " << setw(35) << left << user.name << " |\n";
-        cout << "| 2. Phone: " << setw(34) << left << user.phone << " |\n";
-        cout << "| 3. Aadhaar: " << setw(32) << left << user.aadhaar << " |\n";
-        cout << "| 4. Email: " << setw(35) << left << user.email << " |\n";
-        cout << "+-----------------------------------------------+\n";
-        
-        if (getConfirmation("\nDo you want to edit your profile?")) {
-            cout << "\nLeave field blank to keep current value:\n";
+        while (true) {
+            cout << "\n";
+            cout << "+-----------------------------------------------+\n";
+            cout << "|                USER PROFILE                  |\n";
+            cout << "+-----------------------------------------------+\n";
+            cout << "| Username: " << setw(34) << left << user.username << " |\n";
+            cout << "| Name: " << setw(37) << left << user.name << " |\n";
+            cout << "| Phone: " << setw(36) << left << user.phone << " |\n";
+            cout << "| Aadhaar: " << setw(34) << left << user.aadhaar << " |\n";
+            cout << "| Email: " << setw(36) << left << user.email << " |\n";
+            cout << "+-----------------------------------------------+\n";
             
-            string newName = getValidString("Enter new name [" + user.name + "]: ", nullptr, true);
-            if (!newName.empty()) user.name = newName;
+            cout << "\n+-------------------------------------+\n";
+            cout << "|        PROFILE OPTIONS             |\n";
+            cout << "+-------------------------------------+\n";
+            cout << "| 1. Edit Profile Details            |\n";
+            cout << "| 2. Change Password                 |\n";
+            cout << "| 3. Back to Main Menu               |\n";
+            cout << "+-------------------------------------+\n";
             
-            string newPhone = getValidString("Enter new phone [" + user.phone + "]: ", validatePhone, true);
-            if (!newPhone.empty()) user.phone = newPhone;
+            int choice = getValidInput("Enter your choice (1-3): ", 1, 3);
             
-            string newAadhaar = getValidString("Enter new Aadhaar [" + user.aadhaar + "]: ", validateAadhaar, true);
-            if (!newAadhaar.empty()) user.aadhaar = newAadhaar;
-            
-            string newEmail = getValidString("Enter new email [" + user.email + "]: ", validateEmail, true);
-            if (!newEmail.empty()) user.email = newEmail;
-            
-            string newPassword = getValidString("Enter new Password:");
-            if(!newPassword.empty()) user.password = newPassword;
+            switch (choice) {
+                case 1: {
+                    cout << "\nLeave field blank to keep current value:\n";
+                    
+                    string newName = getValidString("Enter new name [" + user.name + "]: ", nullptr, true);
+                    if (!newName.empty()) user.name = newName;
+                    
+                    string newPhone = getValidString("Enter new phone [" + user.phone + "]: ", validatePhone, true);
+                    if (!newPhone.empty()) user.phone = newPhone;
+                    
+                    string newAadhaar = getValidString("Enter new Aadhaar [" + user.aadhaar + "]: ", validateAadhaar, true);
+                    if (!newAadhaar.empty()) user.aadhaar = newAadhaar;
+                    
+                    string newEmail = getValidString("Enter new email [" + user.email + "]: ", validateEmail, true);
+                    if (!newEmail.empty()) user.email = newEmail;
+                    
+                    saveUserProfile(user);
+                    cout << "\nProfile updated successfully!\n";
+                    break;
+                }
+                case 2: {
+                    // Password Change - Current Password Verification
+                    const int MAX_ATTEMPTS = 3;
+                    int attempts_remaining = MAX_ATTEMPTS;
 
-            saveUserProfile(user);
-            cout << "\nProfile updated successfully!\n";
+                    cout << "For security, please verify your current password." << endl;
+                    
+                    while (attempts_remaining > 0) {
+                        string currentPassword = getPassword("Enter current password: ");
+                        
+                        if (currentPassword == user.password) {
+                            break;
+                        }
+                        
+                        attempts_remaining--;
+                        cout << "Incorrect password. Attempts remaining: " << attempts_remaining << endl;
+                        
+                        if (attempts_remaining == 0) {
+                            cout << "Security notice: Maximum attempts reached. Returning to main menu." << endl;
+                            cout << "\nPress Enter to continue...";
+                            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                            cin.get();
+                            return;
+                        }
+                    }
+
+                    // New Password Entry
+                    cout << "\nPassword verified. You may now set a new password." << endl;
+                    while (true) {
+                        string newPassword = getAndValidatePassword("Enter new password (min 8 chars, with upper, lower, and number): ");
+                        
+                        if (newPassword == user.password) {
+                            cout << "Security requirement: New password must differ from current password." << endl;
+                            continue;
+                        }
+                        
+                        string confirmPassword = getPassword("Confirm new password: ");
+                        
+                        if (newPassword != confirmPassword) {
+                            cout << "Error: Password confirmation does not match." << endl;
+                            continue;
+                        }
+                        
+                        // Successful password change
+                        user.password = newPassword;
+                        saveUserProfile(user);
+                        cout << "Success: Your password has been updated." << endl;
+                        break;
+                    }
+                    break;
+                }
+                case 3:
+                    return;
+            }
+            
+            cout << "\nPress Enter to continue...";
+            cin.ignore(numeric_limits<streamsize>::max(), '\n');
+            cin.get();
         }
     } catch (const exception& e) {
         cerr << "Error: " << e.what() << endl;
+        cout << "\nPress Enter to continue...";
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        cin.get();
     }
-    
-    cout << "\nPress Enter to continue...";
-    cin.ignore(numeric_limits<streamsize>::max(), '\n');
-    cin.get();
 }
+
 
 void viewBookingHistory(const string& username) {
     try {
