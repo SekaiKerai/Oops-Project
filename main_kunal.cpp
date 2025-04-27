@@ -557,7 +557,7 @@ vector<LoginCredentials> loadAllCredentials() {
     return credentials;
 }
 
-User loginUser(const vector<LoginCredentials>& allCredentials) {
+User loginUser(const vector<LoginCredentials>& allCredentials,string& rrole) {
     while (true) {
         cout << "\n+-------------------------------------+\n";
         cout << "|               LOGIN                |\n";
@@ -569,7 +569,7 @@ User loginUser(const vector<LoginCredentials>& allCredentials) {
             username = getValidUsername("Username: ");
             
             for (const auto& cred : allCredentials) {
-                if (cred.username == username) {
+                if (cred.username == username && cred.role == rrole) {
                     usernameExists = true;
                     break;
                 }
@@ -639,7 +639,7 @@ User registerNewUser(const string& role, const vector<LoginCredentials>& allCred
         
         // Check if username already exists
         for (const auto& cred : allCredentials) {
-            if (cred.username == newUser.username) {
+            if (cred.username == newUser.username && cred.role == role) {
                 cout << "Username already exists. Please choose a different one.\n";
                 usernameExists = true;
                 break;
@@ -682,23 +682,26 @@ User registerNewUser(const string& role, const vector<LoginCredentials>& allCred
     }
     //default rating of 4.0
     
-    ofstream file2("Drivers.csv" , ios::app);
-    if(file2.is_open()){
-        file2 << newUser.name << "," << newUser.phone << ","
-                << "4.0" << "," << lat << "," << lon << ","
-                << newUser.role << "\n";
+    if(role == "driver"){
+        ofstream file2("Drivers.csv" , ios::app);
+        if(file2.is_open()){
+            file2 << newUser.name << "," << newUser.phone << ","
+                    << "4.0" << "," << lat << "," << lon << ","
+                    << newUser.role << "\n";
+        }
     }
+    
     cout << "\nRegistration successful!\n";
     return newUser;
 }
 
 // New main menu for login/registration
 User handleLogin(bool showWelcome = true) {
-    if (showWelcome) {
-        cout << "\n+-------------------------------------+\n";
-        cout << "|    WELCOME TO CAB BOOKING SYSTEM    |\n";
-        cout << "+-------------------------------------+\n";
-    }
+    // if (showWelcome) {
+    //     cout << "\n+-------------------------------------+\n";
+    //     cout << "|    WELCOME TO CAB BOOKING SYSTEM    |\n";
+    //     cout << "+-------------------------------------+\n";
+    // }
     
     while (true) {
         cout << "\n+-------------------------------------+\n";
@@ -732,7 +735,7 @@ User handleLogin(bool showWelcome = true) {
         auto allCredentials = loadAllCredentials();
         
         if (authChoice == 1) {
-            return loginUser(allCredentials);
+            return loginUser(allCredentials, role);
         } else if (authChoice == 2) {
             return registerNewUser(role,allCredentials);
         }
@@ -1556,11 +1559,11 @@ void viewBookingHistory(const string& username) {
         }
 
         cout << "\n";
-        cout << "+------------------------------------------------------------------------------------------------+\n";
-        cout << "|                                  YOUR BOOKING HISTORY                                                 |\n";
-        cout << "+---------------------+---------------+-----------+---------------------+-----------------------+\n";
-        cout << "| Date/Time           | Driver Name        | Contact   |Price     | From              | To                 |\n";
-        cout << "+---------------------+---------------+-----------+---------------------+-----------------------+\n";
+        cout << "+------------------------------------------------------------------------------------------------------------------------------------------+\n";
+        cout << "|                                                           YOUR BOOKING HISTORY                                                          |\n";
+        cout << "+---------------------+---------------+-----------+---------------------+------------------------------------------------------------------+\n";
+        cout << "| Date/Time           | Driver Name        | Contact   |Price     | From                              |To                                  |\n";
+        cout << "+---------------------+---------------+-----------+---------------------+------------------------------------------------------------------+\n";
         vector<Driver>drivers = loadDrivers();
         string line;
         while (getline(file, line)) {
@@ -1586,13 +1589,13 @@ void viewBookingHistory(const string& username) {
                      << "| " << setw(20) << left << driver 
                      << "| " << setw(10) << left << driverContact.substr(0, 10)
                      << "| Rs." << setw(6) << left << fixed << setprecision(2) << price
-                     << "| " << setw(19) << left << from.substr(0, 19)
-                     << "| " << setw(21) << left << to.substr(0, 21) << "|\n";
+                     << "| " << setw(35) << left << from.substr(0, 35)
+                     << "| " << setw(35) << left << to.substr(0, 35) << "|\n";
             } catch (...) {
                 continue;
             }
         }
-        cout << "+---------------------+---------------+-----------+---------------------+-----------------------+\n";
+        cout << "+---------------------+---------------+-----------+---------------------+------------------------------------------------------------------+\n";
     } catch (const exception& e) {
         cerr << "Error: " << e.what() << endl;
     }

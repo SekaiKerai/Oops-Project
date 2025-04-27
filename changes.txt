@@ -69,7 +69,5 @@ edit details in driver , will have to option to update his current start locatio
 original file of driver , copy of driver should keep update of everytime updating during booking
 
 ----------------------TO DO------------------------------
-debug : creating a user , user getting added in driver file
-
-Later:
+manual option check
 if you want you can show owner contact in rental history
