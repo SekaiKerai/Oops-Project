@@ -1,0 +1,48 @@
+Structs:
+Location - id , name, lat, lon
+Driver - name, contact, rating, lat, lon, type and updatelocation()
+LoginCredentials - username, password, role
+User - username, password, phone, aadhar, email, role
+
+classes: hierarchical inheritance used
+RentalVehicle-
+    Motorcycle, Sedan, Hatchback, Sedan, SUV
+Booking - 
+    TuktukBooking,TaxiBooking
+
+Template:
+Getvalidinput - input validation for int,double,float
+
+Validation functions:
+getValidString(prompt , validator, allowblank) - validators bool type
+    validatePhone
+    validateAadhaar
+    validateEmail
+
+getValidUsername 
+getConfirmation - y/n
+getAndValidatePassword - used in entering password during reg, passwordedit
+getPassword - login time, renentering password during confirmation of new password - this time no need for validate
+
+functions:
+CalculateDistance - Haversine formula
+resetDriverLocations - 4am reset - idea phone,pair<lat,lon> unordered map to change the location in logn time 
+updateDriverLocation - profile edit new start location for driver
+
+Loading:
+vector<LoginCredentials> loadAllCredentials() - Users.csv file read and store in vector
+
+Flow:
+Handlelogin - user/driver login/new acc
+
+user-   
+    bookcab
+    rentcab
+    viewUserProfile
+    viewhistorymenu - viewbookinghistory , viewrentalhistory - both use unique key (username)
+    logout
+
+driver-
+    viewdriverbookings - search history based on driver phone (unique)
+    viewUserProfile
+    logout

@@ -68,6 +68,25 @@ const string& username, const string& type,
 edit details in driver , will have to option to update his current start location
 original file of driver , copy of driver should keep update of everytime updating during booking
 
+Kunal changes - 28/04/2025
+price - no function overrriing / was not being used
+removing things we dont know and not used in program:
+    removed the class of exception(in-built)
+
+Read :
+    Tuktuk -> base price = 20.0 , perkm = 10.0
+    Taxi -> base price = 100.0, perkm = 40.0
+
+Things new:
+    virtual ~RentalVehicle() = default; - when using virtual functions in base class, its good to call a virtual destructor to prevent memory leaks
+    string getType() const { return type; } - why const? when called, only read , no updation of field
+    stringstream -> extract number from a string safely
+    unique_ptr -> no other pointer points to the current object
+    static_cast (used in book cab) - locations is vector<locations> so to convert size of location struct to int
+    const_cast (used to update driverlocation after booking) - lat,lon is const so const_cast removes this and allows change of lat,lon 
+
 ----------------------TO DO------------------------------
+viewdriverbooking test
+*** removing reset driver location at 4am? - updating start location should be done in originaldrivers, newdrivers also should be in original drivers
 manual option check
 if you want you can show owner contact in rental history
