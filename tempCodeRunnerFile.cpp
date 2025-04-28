@@ -1,1 +1,1 @@
-getValidIn
+(cred.role == "Tuktuk" || cred.role == "Taxi" )

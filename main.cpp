@@ -387,66 +387,6 @@ double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
 }
 
 
-//function that resets the driver locations after 4 am
-void resetDriverLocations() {
-    
-    time_t now = time(0);
-    tm* local = localtime(&now);
-    if (local->tm_hour < 4) return;
-
-    
-    struct stat fileInfo;
-    stat("Drivers.csv", &fileInfo);
-    tm* modified = localtime(&fileInfo.st_mtime);
-    if (modified->tm_mday == local->tm_mday && modified->tm_hour >= 4) return;
-
-    
-     ifstream orig("OriginalDrivers.csv");
-     string line;
-     unordered_map< string,  pair< string,  string>> originalLocs;
-    
-    while (getline(orig, line)) {
-         istringstream ss(line);
-         string name, phone, rating, lat, lon, type;
-        getline(ss, name, ',');
-        getline(ss, phone, ',');
-        getline(ss, rating, ',');
-        getline(ss, lat, ',');
-        getline(ss, lon, ',');
-        getline(ss, type);
-        if(originalLocs.find(phone)!=originalLocs.end())originalLocs[phone] = {lat, lon};
-    }
-
-    
-     ifstream in("Drivers.csv");
-     ostringstream updated;
-    
-    while (getline(in, line)) {
-         istringstream ss(line);
-         string name, phone, rating, lat, lon, type;
-        
-        getline(ss, name, ',');
-        getline(ss, phone, ',');
-        getline(ss, rating, ',');
-        getline(ss, lat, ',');
-        getline(ss, lon, ',');
-        getline(ss, type);
-
-        if (originalLocs.count(phone)) {
-            updated << name << "," << phone << "," << rating << ","
-                   << originalLocs[phone].first << "," 
-                   << originalLocs[phone].second << "," 
-                   << type << "\n";
-        } else {
-            updated << line << "\n"; 
-        }
-    }
-
-    
-     ofstream("Drivers.csv") << updated.str();
-}
-
-
 bool updateDriverLocation(const  string& phone, double newLat, double newLon) {
     
      ifstream inFile("Drivers.csv");
@@ -1644,7 +1584,6 @@ void showLogoutMessage() {
 }
 
 int main() {
-    resetDriverLocations();
     try {
         displayWelcome();
         
